@@ -1,0 +1,17 @@
+{
+  "name": "NO.1 PRO — 기계식 새틀라이트 공부 타이머",
+  "short_name": "NO.1 PRO",
+  "description": "Ōtsuka Lōtec No. 5 Kai 새틀라이트 아워 메커니즘 기반 아날로그 몰입형 공부 타이머",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#080B0F",
+  "theme_color": "#E6E9EE",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="steel">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#E6E9ED" id="metaThemeColor" />
+  <meta name="description" content="NO.1 PRO — Ōtsuka Lōtec No. 5 Kai 새틀라이트 아워 메커니즘 기반 아날로그 몰입형 기계식 공부 타이머" />
+  <title>NO.1 PRO — 기계식 새틀라이트 공부 타이머</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23C8CED6' stroke='%234A5058' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='24' fill='%2325282D'/%3E%3Cpath d='M32 32 L49 18 A22 22 0 0 1 49 46 Z' fill='%23D94336' opacity='0.88'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%23E5C26B'/%3E%3C/svg%3E" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <!-- 상단 바 -->
+    <header class="topbar">
+      <div class="brand-group">
+        <div class="brand-mark">
+          <span class="brand-dot" aria-hidden="true"></span>
+          <span class="brand-title">NO.1 PRO</span>
+        </div>
+        <span class="brand-homage">HOMAGE TO ŌTSUKA LŌTEC NO. 5 KAI</span>
+      </div>
+
+      <div class="topbar-actions topbar-switch-stack" aria-label="상단 제어 스위치">
+        <label class="topbar-switch-row" id="topbarMannerSwitch" for="chkMannerMode" title="독서실 · 도서관 무음 매너 모드">
+          <span class="topbar-switch-label">무음</span>
+          <input type="checkbox" id="chkMannerMode" class="toggle-input is-topbar" aria-label="독서실 · 도서관 무음 매너 모드" />
+        </label>
+        <label class="topbar-switch-row" id="topbarStandbySwitch" for="chkStandbyMode" title="풀스크린 스탠바이 모드 (F)">
+          <span class="topbar-switch-label">스탠바이</span>
+          <input type="checkbox" id="chkStandbyMode" class="toggle-input is-topbar" aria-label="풀스크린 스탠바이 모드" />
+        </label>
+      </div>
+    </header>
+
+    <!-- 스탠바이 모드 전용 상단 종료/조작 바 -->
+    <div class="standby-hud" id="standbyHud" aria-hidden="true">
+      <button type="button" class="standby-btn" data-action="toggle-timer" id="btnStandbyToggle">시작</button>
+      <button type="button" class="standby-btn" data-action="standby-toggle-music" id="btnStandbyMusic">음악</button>
+      <button type="button" class="standby-btn is-exit" data-action="toggle-standby">스탠바이 종료 (Esc)</button>
+    </div>
+
+    <!-- 스탠바이 모드에서 음악이 닫혀 있을 때 좌하단에 뜨는 원터치 음악 열기 필 -->
+    <button type="button" class="standby-music-pill" id="standbyMusicPill" data-action="standby-toggle-music" aria-label="스탠바이 음악 컨트롤 열기">
+      <span class="music-live-dot is-idle" aria-hidden="true"></span>
+      <span>YouTube Music 열기</span>
+    </button>
+
+    <!-- 메인 2열 워크스페이스 -->
+    <main class="workspace">
+      <!-- 좌측: 새틀라이트 아워 히어로 스테이지 -->
+      <section class="hero-stage" aria-label="새틀라이트 아워 시계 스테이지">
+        <div class="stage-status-wrap">
+          <div class="stage-flag-slot" id="stageFlagSlot" aria-live="polite">
+            <span class="status-crown-tag" id="crownModeBadge" hidden>용두 1단 · ±1분 설정</span>
+            <span class="meta-pill is-muted" id="wakeLockBadge" hidden>화면 유지</span>
+            <span class="meta-pill is-manner" id="mannerBadge" hidden>독서실 무음</span>
+          </div>
+        </div>
+
+        <div class="watch-frame">
+          <div id="satelliteMount" class="satellite-mount"></div>
+        </div>
+
+        <!-- 시계 하단 일체형 모드 드럼 + 슬림 집중 시작/리셋 통합 조작 파드 -->
+        <div class="watch-control-pod" aria-label="모드 전환 및 타이머 조작 파드">
+          <div class="mode-drum-chassis" id="modeDrumChassis" aria-label="모드 회전 드럼 셀렉터">
+            <button type="button" class="mode-drum-step" data-action="step-mode-drum" data-dir="-1" aria-label="이전 모드로 회전" title="이전 모드">▲</button>
+            <div class="mode-drum-knurl is-left" aria-hidden="true"></div>
+            <div class="mode-drum-viewport" id="modeDrumViewport" role="button" tabindex="0" aria-label="모드 회전 드럼 (클릭·스크롤·드래그로 모드 전환)" title="클릭·스크롤·드래그로 모드 전환">
+              <div class="mode-drum-stage" id="modeDrumStage" data-active-mode="pomodoro">
+                <div class="mode-drum-face is-active" data-drum-mode="pomodoro">
+                  <span class="drum-face-idx">01</span>
+                  <span class="drum-face-name">포모도로</span>
+                  <span class="drum-face-dots" aria-hidden="true"><i class="is-on"></i><i></i><i></i><i></i></span>
+                </div>
+                <div class="mode-drum-face" data-drum-mode="countdown" aria-hidden="true">
+                  <span class="drum-face-idx">02</span>
+                  <span class="drum-face-name">타이머</span>
+                  <span class="drum-face-dots" aria-hidden="true"><i></i><i class="is-on"></i><i></i><i></i></span>
+                </div>
+                <div class="mode-drum-face" data-drum-mode="stopwatch" aria-hidden="true">
+                  <span class="drum-face-idx">03</span>
+                  <span class="drum-face-name">스톱워치</span>
+                  <span class="drum-face-dots" aria-hidden="true"><i></i><i></i><i class="is-on"></i><i></i></span>
+                </div>
+                <div class="mode-drum-face" data-drum-mode="clock" aria-hidden="true">
+                  <span class="drum-face-idx">04</span>
+                  <span class="drum-face-name">데스크 시계</span>
+                  <span class="drum-face-dots" aria-hidden="true"><i></i><i></i><i></i><i class="is-on"></i></span>
+                </div>
+              </div>
+            </div>
+            <div class="mode-drum-knurl is-right" aria-hidden="true"></div>
+            <button type="button" class="mode-drum-step" data-action="step-mode-drum" data-dir="1" aria-label="다음 모드로 회전" title="다음 모드">▼</button>
+          </div>
+          <div class="pod-divider" aria-hidden="true"></div>
+          <div class="primary-controls pod-action-row">
+            <button type="button" class="ctrl-btn is-primary" id="btnToggle" data-action="toggle-timer">집중 시작</button>
+            <button type="button" class="ctrl-btn" id="btnReset" data-action="reset-timer">리셋</button>
+            <button type="button" class="ctrl-btn is-accent" id="btnSaveStopwatch" data-action="save-stopwatch" hidden>기록 저장</button>
+            <div class="pod-clock-plate" id="podClockPlate" hidden>실시간 시계 · 다이얼 클릭 타종</div>
+          </div>
+        </div>
+
+        <div class="readout-block">
+          <div class="digital-readout" id="digitalReadout" aria-live="off">25:00</div>
+          <div class="status-line" id="statusLine">집중 라운드 #1 · 25분 목표</div>
+        </div>
+
+        <div class="shortcut-bar" aria-label="키보드 단축키 안내">
+          <span><kbd>Space</kbd> 시작/정지</span>
+          <span><kbd>R</kbd> 리셋</span>
+          <span><kbd>1</kbd>–<kbd>4</kbd> 모드</span>
+          <span><kbd>F</kbd> 스탠바이</span>
+          <span><kbd>P</kbd> 음악</span>
+          <span><kbd>M</kbd> 음소거</span>
+        </div>
+      </section>
+
+      <!-- 우측: 3-탭 공부 대시보드 -->
+      <aside class="dashboard-panel" aria-label="타이머 제어 및 공부 기록 패널">
+        <div class="tab-bar" role="tablist" aria-label="대시보드 탭">
+          <button type="button" class="tab-btn is-active" role="tab" aria-selected="true" aria-controls="panelTimer" id="tabTimer" data-action="switch-tab" data-tab="timer">타이머</button>
+          <div class="rocker-pivot-divider" aria-hidden="true"></div>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelSound" id="tabSound" data-action="switch-tab" data-tab="sound">사운드</button>
+          <div class="rocker-pivot-divider" aria-hidden="true"></div>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelLog" id="tabLog" data-action="switch-tab" data-tab="log">기록</button>
+        </div>
+
+        <!-- 탭 전환·스탠바이 모드에서도 끊김 없이 유지되는 YouTube Music 통합 콘솔 독 -->
+        <div class="music-player-dock" id="musicPlayerDock" hidden aria-label="YouTube Music 통합 컨트롤러">
+          <div class="music-dock-bar">
+            <div class="music-dock-info">
+              <span class="music-live-dot" id="musicLiveDot" aria-hidden="true"></span>
+              <span class="music-dock-title" id="musicNowTitle">재생할 음악을 선택하세요</span>
+              <span class="music-type-badge" id="musicTypeBadge" hidden>TRACK</span>
+            </div>
+            <div class="music-dock-controls">
+              <button type="button" class="dock-mini-btn" data-action="music-prev" title="이전 곡 / 이전 프리셋" aria-label="이전 곡">‹</button>
+              <button type="button" class="dock-mini-btn is-play-main" id="btnMusicPlayPause" data-action="music-toggle-play" title="재생 / 일시정지 (P)">재생</button>
+              <button type="button" class="dock-mini-btn" data-action="music-next" title="다음 곡 / 다음 프리셋" aria-label="다음 곡">›</button>
+              <button type="button" class="dock-mini-btn" id="btnMusicToggleDetail" data-action="music-toggle-detail" aria-expanded="false" title="플레이리스트·링크·상세 컨트롤 열기">상세</button>
+              <button type="button" class="dock-mini-btn is-close" data-action="music-unload" title="플레이어 닫기" aria-label="플레이어 닫기">✕</button>
+            </div>
+          </div>
+
+          <div class="music-vol-bar">
+            <button type="button" class="dock-mini-btn" id="btnMusicMute" data-action="music-toggle-mute" aria-pressed="false" title="음악 음소거">음소거</button>
+            <input type="range" id="sliderMusicVol" class="range-slider music-vol-slider" min="0" max="100" value="75" aria-label="YouTube Music 볼륨" />
+            <span class="music-vol-val" id="valMusicVol">75%</span>
+            <button type="button" class="dock-mini-btn" id="btnMusicToggleFrame" data-action="music-toggle-frame" title="영상 화면 접기/보기">접기</button>
+            <button type="button" class="dock-mini-btn" data-action="open-ytm-popup" title="YouTube Music 앱/팝업에서 열기">YT↗</button>
+          </div>
+
+          <!-- 스탠바이 & 타 탭에서도 바로 곡 전환·링크 입력·앰비언스 레이어링 가능한 상세 서랍 -->
+          <div class="music-detail-drawer" id="musicDetailDrawer" hidden>
+            <div class="drawer-section">
+              <div class="drawer-label-row">
+                <span class="drawer-label">빠른 플레이리스트 전환</span>
+                <label class="drawer-sync-check">
+                  <input type="checkbox" id="chkDockAutoSync" checked />
+                  <span>타이머 연동</span>
+                </label>
+              </div>
+              <div class="music-preset-chips is-compact" id="dockPresetChips"></div>
+            </div>
+
+            <form class="dock-url-form" id="dockUrlForm">
+              <input type="url" id="dockUrlInput" class="text-input is-compact" placeholder="YouTube Music 링크 붙여넣기" aria-label="스탠바이 YouTube Music 링크 입력" />
+              <button type="submit" class="small-btn is-solid is-compact">재생</button>
+              <button type="button" class="small-btn is-compact" data-action="dock-save-bookmark" title="현재 입력한 링크 북마크 저장">저장</button>
+            </form>
+
+            <div class="drawer-ambient-row" aria-label="배경 백색소음 빠른 레이어링">
+              <span class="drawer-label">배경음 레이어</span>
+              <div class="drawer-ambient-pills">
+                <button type="button" class="ambient-quick-btn" id="btnQuickTick" data-action="quick-ambient" data-channel="tick">4Hz 틱</button>
+                <button type="button" class="ambient-quick-btn" id="btnQuickRain" data-action="quick-ambient" data-channel="rain">빗소리</button>
+                <button type="button" class="ambient-quick-btn" id="btnQuickCafe" data-action="quick-ambient" data-channel="cafe">카페</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="music-file-notice" id="musicFileNotice" hidden>
+            로컬 파일(<code>file://</code>) 실행 시 유튜브 보안 정책으로 내장 재생이 제한될 수 있습니다. 우측 <strong>YT↗</strong> 버튼으로 YouTube Music 미니 팝업을 열어 함께 사용하세요.
+          </div>
+          <div class="music-iframe-wrap" id="musicIframeWrap">
+            <iframe id="musicIframe" class="music-iframe" title="NO.1 PRO YouTube Music Player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+          </div>
+        </div>
+
+        <!-- 탭 1: 타이머 설정 -->
+        <section class="tab-panel is-active" id="panelTimer" role="tabpanel" aria-labelledby="tabTimer">
+          <div class="card-block" id="timeConfigCard">
+            <div class="card-head">
+              <h2 class="card-title" id="timeConfigTitle">포모도로 구성</h2>
+              <span class="card-sub" id="roundIndicator">현재 라운드 #1</span>
+            </div>
+
+            <div class="preset-row" id="pomodoroPresetsRow" role="group" aria-label="포모도로 프리셋">
+              <button type="button" class="preset-btn is-active" data-action="set-preset" data-focus="25" data-break="5" aria-pressed="true">25 / 5</button>
+              <div class="rocker-pivot-divider" aria-hidden="true"></div>
+              <button type="button" class="preset-btn" data-action="set-preset" data-focus="50" data-break="10" aria-pressed="false">50 / 10</button>
+              <div class="rocker-pivot-divider" aria-hidden="true"></div>
+              <button type="button" class="preset-btn" data-action="set-preset" data-focus="90" data-break="20" aria-pressed="false">90 / 20</button>
+            </div>
+
+            <div class="finetune-row" id="fineTuneRow">
+              <button type="button" class="step-btn" data-action="adjust-min" data-delta="-5">-5분</button>
+              <button type="button" class="step-btn" data-action="adjust-min" data-delta="-1">-1분</button>
+              <div class="finetune-value" id="configMinutesDisplay">25분</div>
+              <button type="button" class="step-btn" data-action="adjust-min" data-delta="1">+1분</button>
+              <button type="button" class="step-btn" data-action="adjust-min" data-delta="5">+5분</button>
+            </div>
+
+            <div class="option-row" id="pomodoroOptionsRow">
+              <label class="check-label">
+                <input type="checkbox" id="chkAutoBreak" />
+                <span>종료 시 휴식/다음 라운드 자동 시작</span>
+              </label>
+              <button type="button" class="text-link-btn" data-action="reset-round">라운드 #1 초기화</button>
+            </div>
+          </div>
+
+          <div class="card-block">
+            <div class="card-head">
+              <h2 class="card-title">과목 / 프로젝트 태그</h2>
+              <span class="card-sub">완료 시 자동 기록</span>
+            </div>
+            <div class="subject-chips" id="subjectChips"></div>
+            <form class="add-subject-form" id="addSubjectForm">
+              <input type="text" id="newSubjectInput" class="text-input" maxlength="16" placeholder="새 과목 추가 (예: 미적분, 토익)" aria-label="새 과목명 입력" />
+              <button type="submit" class="small-btn">추가</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- 탭 2: 사운드 믹서 & YouTube Music -->
+        <section class="tab-panel" id="panelSound" role="tabpanel" aria-labelledby="tabSound" hidden>
+          <div class="card-block is-music-card">
+            <div class="card-head">
+              <h2 class="card-title">YouTube Music 공부 플레이어</h2>
+              <button type="button" class="text-link-btn" data-action="open-ytm-popup" title="유튜브 뮤직 공식 웹 팝업으로 열기">YT Music 팝업 ↗</button>
+            </div>
+
+            <form class="music-url-form" id="musicUrlForm">
+              <input type="url" id="musicUrlInput" class="text-input" placeholder="music.youtube.com 곡 또는 플레이리스트 링크 붙여넣기" aria-label="YouTube Music 링크 입력" />
+              <div class="music-form-subrow">
+                <input type="text" id="musicTitleInput" class="text-input" maxlength="28" placeholder="북마크 이름 (선택, 예: 새벽 재즈)" aria-label="플레이리스트 북마크 이름" />
+                <button type="submit" class="small-btn is-solid">재생</button>
+                <button type="button" class="small-btn" data-action="save-music-bookmark">저장</button>
+              </div>
+            </form>
+
+            <div class="music-preset-chips" id="musicPresetChips" aria-label="추천 및 저장된 공부 음악"></div>
+
+            <div class="option-row">
+              <label class="check-label">
+                <input type="checkbox" id="chkMusicAutoSync" checked />
+                <span>타이머 시작·정지 시 음악 자동 재생/일시정지</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card-block">
+            <div class="card-head">
+              <h2 class="card-title">종료 알림음</h2>
+              <button type="button" class="text-link-btn" data-action="test-alarm">미리 듣기</button>
+            </div>
+            <div class="segmented-row" role="group" aria-label="종료 알림음 선택">
+              <button type="button" class="seg-btn is-active" data-action="set-alarm" data-alarm="gong" aria-pressed="true">5270P 공</button>
+              <div class="rocker-pivot-divider" aria-hidden="true"></div>
+              <button type="button" class="seg-btn" data-action="set-alarm" data-alarm="chime" aria-pressed="false">단발 차임</button>
+              <div class="rocker-pivot-divider" aria-hidden="true"></div>
+              <button type="button" class="seg-btn" data-action="set-alarm" data-alarm="silent" aria-pressed="false">무음</button>
+            </div>
+            <div class="option-row">
+              <label class="check-label">
+                <input type="checkbox" id="chkHourlyChime" />
+                <span>데스크 시계 모드 정각 1회 클래식 공 타종</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card-block">
+            <div class="card-head">
+              <h2 class="card-title">집중 사운드 믹서 (오프라인 자체 합성)</h2>
+              <button type="button" class="text-link-btn" data-action="mute-ambience">전체 음소거 (M)</button>
+            </div>
+
+            <div class="mixer-list">
+              <div class="mixer-item">
+                <div class="mixer-label-row">
+                  <label for="sliderTick">4Hz 무브먼트 탈진기 ASMR (Miyota 90S5)</label>
+                  <span class="mixer-val" id="valTick">0%</span>
+                </div>
+                <input type="range" id="sliderTick" class="range-slider" min="0" max="100" value="0" />
+              </div>
+
+              <div class="mixer-item">
+                <div class="mixer-label-row">
+                  <label for="sliderRain">빗소리 (Pink Noise Lowpass)</label>
+                  <span class="mixer-val" id="valRain">0%</span>
+                </div>
+                <input type="range" id="sliderRain" class="range-slider" min="0" max="100" value="0" />
+              </div>
+
+              <div class="mixer-item">
+                <div class="mixer-label-row">
+                  <label for="sliderCafe">도서관 · 카페 앰비언스</label>
+                  <span class="mixer-val" id="valCafe">0%</span>
+                </div>
+                <input type="range" id="sliderCafe" class="range-slider" min="0" max="100" value="0" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 탭 3: 공부 기록 아카이브 -->
+        <section class="tab-panel" id="panelLog" role="tabpanel" aria-labelledby="tabLog" hidden>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-label">오늘의 순공 시간</span>
+              <strong class="kpi-value" id="statTodayMinutes">0분</strong>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">완료 세션</span>
+              <strong class="kpi-value" id="statTodaySessions">0회</strong>
+            </div>
+          </div>
+
+          <div class="card-block">
+            <div class="card-head">
+              <h2 class="card-title">최근 7일 집중 잔디</h2>
+              <span class="card-sub">일일 순공 강도</span>
+            </div>
+            <div class="heatmap-grid" id="heatmapGrid"></div>
+          </div>
+
+          <div class="card-block">
+            <div class="card-head">
+              <h2 class="card-title">오늘의 과목 비중</h2>
+            </div>
+            <div class="subject-bars" id="subjectBars"></div>
+          </div>
+
+          <div class="card-block">
+            <div class="card-head">
+              <h2 class="card-title">최근 세션 로그</h2>
+              <div class="backup-inline">
+                <button type="button" class="text-link-btn" data-action="export-json">JSON 백업</button>
+                <button type="button" class="text-link-btn" data-action="trigger-import">복원</button>
+                <button type="button" class="text-link-btn is-danger" data-action="clear-logs">비우기</button>
+              </div>
+            </div>
+            <input type="file" id="importFileInput" accept=".json,application/json" hidden />
+            <div class="recent-logs" id="recentLogsList"></div>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <!-- 세션 완료 1줄 회고 모달 -->
+    <div class="modal-backdrop" id="reflectionModal" hidden role="dialog" aria-modal="true" aria-labelledby="reflectionTitle">
+      <div class="modal-card">
+        <div class="modal-eyebrow">SESSION COMPLETE</div>
+        <h3 class="modal-title" id="reflectionTitle">25분 집중을 마쳤습니다</h3>
+        <p class="modal-desc" id="reflectionDesc">세션이 공부 기록에 자동 저장되었습니다. 원하시면 1줄 회고 메모를 남겨보세요.</p>
+        <form id="reflectionForm" class="modal-form">
+          <input type="text" id="reflectionInput" class="text-input" maxlength="140" placeholder="예: 3장 연습문제 완료, 개념 정리 끝" aria-label="세션 한 줄 회고 메모" />
+          <div class="modal-actions">
+            <button type="button" class="ctrl-btn" data-action="close-reflection">닫기</button>
+            <button type="submit" class="ctrl-btn is-primary">메모 저장</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 용두·다이얼 조작 가이드 모달 -->
+    <div class="modal-backdrop" id="guideModal" hidden role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+      <div class="modal-card guide-modal-card">
+        <div class="modal-eyebrow">MECHANICAL GUIDE</div>
+        <h3 class="modal-title" id="guideTitle">용두 · 다이얼 조작 안내</h3>
+        <div class="guide-list">
+          <div class="guide-item">
+            <span class="guide-badge is-minute">용두 1회 클릭 (1단 인출 · ±1분)</span>
+            <p class="guide-copy">기본 0단(잠금)에서는 조작되지 않습니다. 4시 용두를 <strong>한 번 클릭해 1단으로 뽑은 뒤</strong> 스크롤·드래그하면 <strong>±1분 단위</strong>로 정밀하게 조절됩니다.</p>
+          </div>
+          <div class="guide-item">
+            <span class="guide-badge is-hour">용두 2회 클릭 (2단 인출 · ±10분)</span>
+            <p class="guide-copy">용두를 <strong>한 번 더 클릭해 2단으로 뽑으면</strong> <strong>±10분 단위</strong>로 빠르게 조절되며, 60분 이상 설정 시 좌측 시간 게이지가 함께 올라갑니다. 다시 클릭하면 0단 잠금으로 복귀합니다.</p>
+          </div>
+          <div class="guide-item">
+            <span class="guide-badge is-dial">다이얼 클릭 · 더블 클릭</span>
+            <p class="guide-copy">시계 다이얼을 <strong>한 번 클릭</strong>하면 5270P 타종이 울리고, <strong>더블 클릭</strong>하면 <strong>600× 기계식 고속 시연</strong>을 시작하거나 종료할 수 있습니다.</p>
+          </div>
+        </div>
+        <div class="guide-shortcuts">
+          <span><kbd>Space</kbd> 시작/정지</span>
+          <span><kbd>R</kbd> 리셋</span>
+          <span><kbd>1</kbd>–<kbd>4</kbd> 모드</span>
+          <span><kbd>F</kbd> 스탠바이</span>
+          <span><kbd>P</kbd> 음악</span>
+          <span><kbd>M</kbd> 음소거</span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ctrl-btn is-primary" data-action="close-guide">확인</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 토스트 알림 -->
+    <div class="toast-banner" id="toastBanner" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <!-- Zero-Build Classic Scripts (file:// 100% 호환) -->
+  <script src="timer-core.js"></script>
+  <script src="audio-engine.js"></script>
+  <script src="music-player.js"></script>
+  <script src="storage.js"></script>
+  <script src="satellite-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
