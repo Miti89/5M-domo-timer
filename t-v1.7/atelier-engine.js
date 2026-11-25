@@ -32,7 +32,8 @@
       en: 'Obsidian Baseplate',
       cumMinutes: 5,
       stepMinutes: 5,
-      desc: '0과 1의 대비를 이루는 매트 블랙 무브먼트 기판'
+      desc: '0과 1의 대비를 이루는 매트 블랙 무브먼트 기판',
+      story: '시작하지 않은 0의 세계와,'
     },
     {
       id: 'barrel',
@@ -41,7 +42,8 @@
       en: 'Mainspring Barrel',
       cumMinutes: 10,
       stepMinutes: 5,
-      desc: '42시간 파워리저브 합금 메인스프링'
+      desc: '42시간 파워리저브 합금 메인스프링',
+      story: '이미 발을 디딘 1의 세계 사이에는'
     },
     {
       id: 'geartrain',
@@ -50,7 +52,8 @@
       en: 'Gear Train',
       cumMinutes: 15,
       stepMinutes: 5,
-      desc: '고정밀 황동·스틸 4단 치차열'
+      desc: '고정밀 황동·스틸 4단 치차열',
+      story: '어정쩡한 회색이 없다.'
     },
     {
       id: 'escapement',
@@ -59,7 +62,8 @@
       en: '4Hz Escapement',
       cumMinutes: 20,
       stepMinutes: 5,
-      desc: '28,800 vph 기계식 심장부 어셈블리'
+      desc: '28,800 vph 기계식 심장부 어셈블리',
+      story: '망설임을 반으로 자르고,'
     },
     {
       id: 'jumpcam',
@@ -68,7 +72,8 @@
       en: 'Jump Cam & Binary LED',
       cumMinutes: 25,
       stepMinutes: 5,
-      desc: '정각 순간 도약 스타 휠 · 6비트 이진 초 표시 모듈'
+      desc: '정각 순간 도약 스타 휠 · 6비트 이진 초 표시 모듈',
+      story: '단 한 번의 호흡으로'
     },
     {
       id: 'turretcase',
@@ -77,7 +82,8 @@
       en: '3-Porthole Case',
       cumMinutes: 30,
       stepMinutes: 5,
-      desc: '사파이어 렌즈 3창 브러시드 스틸 최종 마감'
+      desc: '사파이어 렌즈 3창 브러시드 스틸 최종 마감',
+      story: '이쪽으로 건너온다.'
     }
   ];
 
@@ -90,7 +96,8 @@
       en: 'Chronograph Baseplate',
       cumMinutes: 45,
       stepMinutes: 15,
-      desc: '어제와 오늘의 차이를 새기는 브러시드 스틸 크로노 기판'
+      desc: '어제와 오늘의 차이를 새기는 브러시드 스틸 크로노 기판',
+      story: '겉보기엔'
     },
     {
       id: 'del_column',
@@ -99,7 +106,8 @@
       en: 'Column Wheel Control',
       cumMinutes: 60,
       stepMinutes: 15,
-      desc: '시작·정지·리셋을 절도 있게 전환하는 8치 칼럼 휠'
+      desc: '시작·정지·리셋을 절도 있게 전환하는 8치 칼럼 휠',
+      story: '어제와 똑같은 하루 같아도,'
     },
     {
       id: 'del_clutch',
@@ -108,7 +116,8 @@
       en: 'Vertical Clutch',
       cumMinutes: 75,
       stepMinutes: 15,
-      desc: '초침 떨림 없이 즉각 구동되는 무마찰 수직 클러치'
+      desc: '초침 떨림 없이 즉각 구동되는 무마찰 수직 클러치',
+      story: '바늘이 1밀리미터 움직인'
     },
     {
       id: 'del_ruler',
@@ -117,7 +126,8 @@
       en: 'Slide Rule Bezel',
       cumMinutes: 90,
       stepMinutes: 15,
-      desc: '변화량(Δ)과 비율을 직관적으로 계산하는 로그 눈금 베젤'
+      desc: '변화량(Δ)과 비율을 직관적으로 계산하는 로그 눈금 베젤',
+      story: '그 미세한 틈(Δ) 사이로'
     },
     {
       id: 'del_counters',
@@ -126,7 +136,8 @@
       en: 'Twin Chrono Counters',
       cumMinutes: 105,
       stepMinutes: 15,
-      desc: '구간 집중 시간을 독립적으로 계측하는 듀얼 서브 다이얼'
+      desc: '구간 집중 시간을 독립적으로 계측하는 듀얼 서브 다이얼',
+      story: '이미 다른 내가'
     },
     {
       id: 'del_case',
@@ -135,7 +146,8 @@
       en: 'Twin-Pusher Case',
       cumMinutes: 120,
       stepMinutes: 15,
-      desc: '2시·4시 펌프 푸셔와 사파이어 글라스 최종 마감'
+      desc: '2시·4시 펌프 푸셔와 사파이어 글라스 최종 마감',
+      story: '자라고 있다.'
     }
   ];
 
@@ -148,7 +160,8 @@
       en: 'Cycloid Bridge',
       cumMinutes: 150,
       stepMinutes: 30,
-      desc: '호이겐스 등시성 곡선이 각인된 하단 스틸 브릿지'
+      desc: '호이겐스 등시성 곡선이 각인된 하단 스틸 브릿지',
+      story: '공이 가장 빠르게 굴러내리는 길은 직선이 아니라,'
     },
     {
       id: 'cyc_snail',
@@ -157,7 +170,8 @@
       en: 'Snail Cam Module',
       cumMinutes: 180,
       stepMinutes: 30,
-      desc: '220° 레트로그레이드 귀환 각도를 제어하는 달팽이 캠'
+      desc: '220° 레트로그레이드 귀환 각도를 제어하는 달팽이 캠',
+      story: '아래로 깊게 떨어졌다가'
     },
     {
       id: 'cyc_rack',
@@ -166,7 +180,8 @@
       en: 'Dual Rack & Pinion',
       cumMinutes: 210,
       stepMinutes: 30,
-      desc: '시·분 동축 부채꼴 기어 연동 치차 모듈'
+      desc: '시·분 동축 부채꼴 기어 연동 치차 모듈',
+      story: '다시 솟아오르는 곡선이다.'
     },
     {
       id: 'cyc_spring',
@@ -175,7 +190,8 @@
       en: 'Flyback Return Spring',
       cumMinutes: 240,
       stepMinutes: 30,
-      desc: '60분 도달 시 0으로 즉시 복귀시키는 탄성 판스프링'
+      desc: '60분 도달 시 0으로 즉시 복귀시키는 탄성 판스프링',
+      story: '집중이 무너지고'
     },
     {
       id: 'cyc_fan',
@@ -184,7 +200,8 @@
       en: '220° Fan Scale Dial',
       cumMinutes: 270,
       stepMinutes: 30,
-      desc: '외곽 220° 분 게이지 · 내곽 200° 시 게이지 스케일'
+      desc: '외곽 220° 분 게이지 · 내곽 200° 시 게이지 스케일',
+      story: '다시 제자리로 돌아오는 그 궤적 자체가,'
     },
     {
       id: 'cyc_case',
@@ -193,7 +210,8 @@
       en: 'Coaxial Hands & Case',
       cumMinutes: 300,
       stepMinutes: 30,
-      desc: '테라코타 팁 분침·스몰 세컨즈·316L 케이스 최종 마감'
+      desc: '테라코타 팁 분침·스몰 세컨즈·316L 케이스 최종 마감',
+      story: '사실은 가장 빠른 길이었다.'
     }
   ];
 
@@ -206,7 +224,8 @@
       en: 'Orbital Baseplate',
       cumMinutes: 350,
       stepMinutes: 50,
-      desc: '두 초점을 중심으로 유성 기어를 지지하는 새틴 기판'
+      desc: '두 초점을 중심으로 유성 기어를 지지하는 새틴 기판',
+      story: '완벽한 원은 중심이 하나지만,'
     },
     {
       id: 'ell_carousel',
@@ -215,7 +234,8 @@
       en: 'Tri-Arm Carousel',
       cumMinutes: 400,
       stepMinutes: 50,
-      desc: '세 개의 시간 위성을 120° 간격으로 공전시키는 브릿지'
+      desc: '세 개의 시간 위성을 120° 간격으로 공전시키는 브릿지',
+      story: '타원은 두 개의 초점을 품고 돈다.'
     },
     {
       id: 'ell_discs',
@@ -224,7 +244,8 @@
       en: 'Satellite Hour Discs',
       cumMinutes: 450,
       stepMinutes: 50,
-      desc: '1~12시를 3개 회전 원판에 분배한 자전형 시간 디스크'
+      desc: '1~12시를 3개 회전 원판에 분배한 자전형 시간 디스크',
+      story: '때로 멀어지고 삐뚤어지더라도'
     },
     {
       id: 'ell_roller',
@@ -233,7 +254,8 @@
       en: '8h Indexing Roller',
       cumMinutes: 500,
       stepMinutes: 50,
-      desc: '위성 디스크를 90° 정밀 전환하는 커스텀 볼베어링 롤러'
+      desc: '위성 디스크를 90° 정밀 전환하는 커스텀 볼베어링 롤러',
+      story: '결국 다시 돌아오게 만드는 중력.'
     },
     {
       id: 'ell_track',
@@ -242,7 +264,8 @@
       en: '120° Minute Arc Track',
       cumMinutes: 550,
       stepMinutes: 50,
-      desc: '우측 1시~5시 궤도를 따라 분을 지시하는 브러시드 섹터'
+      desc: '우측 1시~5시 궤도를 따라 분을 지시하는 브러시드 섹터',
+      story: '완벽하지 않아서'
     },
     {
       id: 'ell_case',
@@ -251,7 +274,8 @@
       en: 'Lugless Round Case',
       cumMinutes: 600,
       stepMinutes: 50,
-      desc: '돔 사파이어 크리스털과 4시 2단 용두 최종 마감'
+      desc: '돔 사파이어 크리스털과 4시 2단 용두 최종 마감',
+      story: '오히려 오래 버티는 나의 궤도.'
     }
   ];
 
@@ -264,7 +288,8 @@
       en: 'Openwork Skeleton Plate',
       cumMinutes: 700,
       stepMinutes: 100,
-      desc: '작은 5분 속 구조를 그대로 드러내는 정밀 투각 메인플레이트'
+      desc: '작은 5분 속 구조를 그대로 드러내는 정밀 투각 메인플레이트',
+      story: '오늘 책상 앞에서 보낸 보잘것없는 5분을'
     },
     {
       id: 'fra_bridge',
@@ -273,7 +298,8 @@
       en: 'Self-Similar Bridges',
       cumMinutes: 800,
       stepMinutes: 100,
-      desc: '반복 패턴의 대칭 트러스로 하중을 분산하는 스켈레톤 브릿지'
+      desc: '반복 패턴의 대칭 트러스로 하중을 분산하는 스켈레톤 브릿지',
+      story: '끝없이 확대해 보면,'
     },
     {
       id: 'fra_gear',
@@ -282,7 +308,8 @@
       en: 'Recursive Gear Train',
       cumMinutes: 900,
       stepMinutes: 100,
-      desc: '크고 작은 톱니가 겹쳐 맞물리는 프랙탈 비례 치차열'
+      desc: '크고 작은 톱니가 겹쳐 맞물리는 프랙탈 비례 치차열',
+      story: '거기엔 내 일생의 모양이'
     },
     {
       id: 'fra_barrel',
@@ -291,7 +318,8 @@
       en: 'Skeletonized Barrel',
       cumMinutes: 1000,
       stepMinutes: 100,
-      desc: '태엽의 감김과 풀림이 그대로 보이는 개방형 배럴 드럼'
+      desc: '태엽의 감김과 풀림이 그대로 보이는 개방형 배럴 드럼',
+      story: '그대로 닮아 있다.'
     },
     {
       id: 'fra_dial',
@@ -300,7 +328,8 @@
       en: 'Layered Index Ring',
       cumMinutes: 1100,
       stepMinutes: 100,
-      desc: '공중에 떠 있는 듯한 플로팅 미닛 트랙과 루미노바 바늘'
+      desc: '공중에 떠 있는 듯한 플로팅 미닛 트랙과 루미노바 바늘',
+      story: '작은 하루의 무늬가'
     },
     {
       id: 'fra_case',
@@ -309,7 +338,8 @@
       en: 'Exhibition Case',
       cumMinutes: 1200,
       stepMinutes: 100,
-      desc: '전·후면 양면 사파이어 글라스와 스틸 베젤 최종 마감'
+      desc: '전·후면 양면 사파이어 글라스와 스틸 베젤 최종 마감',
+      story: '결국 거대한 나를 빚는다.'
     }
   ];
 
@@ -322,7 +352,8 @@
       en: 'Ultra-Slim 3/4 Plate',
       cumMinutes: 1320,
       stepMinutes: 120,
-      desc: '글라슈테 3/4 플레이트 구조 초박형 무브먼트 기판'
+      desc: '글라슈테 3/4 플레이트 구조 초박형 무브먼트 기판',
+      story: '요란한 계획과 불안한 장식을'
     },
     {
       id: 'geo_barrel',
@@ -331,7 +362,8 @@
       en: 'Manual Wind Barrel',
       cumMinutes: 1440,
       stepMinutes: 120,
-      desc: '부드러운 손감기 저항감을 갖춘 선버스트 라쳇 휠'
+      desc: '부드러운 손감기 저항감을 갖춘 선버스트 라쳇 휠',
+      story: '모두 걷어내고'
     },
     {
       id: 'geo_dial',
@@ -340,7 +372,8 @@
       en: 'Galvanized Silver Dial',
       cumMinutes: 1560,
       stepMinutes: 120,
-      desc: '바우하우스 교차 타이포(12·2·4·8·10)와 헤어라인 인덱스'
+      desc: '바우하우스 교차 타이포(12·2·4·8·10)와 헤어라인 인덱스',
+      story: '오직 선과 점만 남겼을 때,'
     },
     {
       id: 'geo_subdial',
@@ -349,7 +382,8 @@
       en: 'Sunken Guilloché Sec',
       cumMinutes: 1680,
       stepMinutes: 120,
-      desc: '동심원 선반 가공이 들어간 단차 6시 스몰 세컨즈'
+      desc: '동심원 선반 가공이 들어간 단차 6시 스몰 세컨즈',
+      story: '비로소 눈앞의 세계가'
     },
     {
       id: 'geo_hands',
@@ -358,7 +392,8 @@
       en: 'Tempered Blued Hands',
       cumMinutes: 1800,
       stepMinutes: 120,
-      desc: '290°C 열처리로 구워낸 슬림 바톤 블루 스틸 시·분침'
+      desc: '290°C 열처리로 구워낸 슬림 바톤 블루 스틸 시·분침',
+      story: '고요하고'
     },
     {
       id: 'geo_case',
@@ -367,7 +402,8 @@
       en: 'Tangente Straight Lugs',
       cumMinutes: 1920,
       stepMinutes: 120,
-      desc: '초슬림 원통 베젤 · 각진 탕겐테 러그 · 3시 용두 최종 마감'
+      desc: '초슬림 원통 베젤 · 각진 탕겐테 러그 · 3시 용두 최종 마감',
+      story: '선명해진다.'
     }
   ];
 
@@ -380,7 +416,8 @@
       en: 'Resonance Baseplate',
       cumMinutes: 2070,
       stepMinutes: 150,
-      desc: '흔들림을 일정한 박자로 정돈하는 진동 흡수 메인플레이트'
+      desc: '흔들림을 일정한 박자로 정돈하는 진동 흡수 메인플레이트',
+      story: '바깥의 세상은 늘 불협화음으로 밀려오지만,'
     },
     {
       id: 'har_balance',
@@ -389,7 +426,8 @@
       en: 'Free-Sprung Balance',
       cumMinutes: 2220,
       stepMinutes: 150,
-      desc: '관성 조절 추를 갖춘 고정밀 오픈하트 밸런스 휠'
+      desc: '관성 조절 추를 갖춘 고정밀 오픈하트 밸런스 휠',
+      story: '내 안의 추는'
     },
     {
       id: 'har_hairspring',
@@ -398,7 +436,8 @@
       en: 'Isochronous Hairspring',
       cumMinutes: 2370,
       stepMinutes: 150,
-      desc: '호흡처럼 고르게 수축·팽창하는 브레게 오버코일 스프링'
+      desc: '호흡처럼 고르게 수축·팽창하는 브레게 오버코일 스프링',
+      story: '오직 제 진동수만 기억한다.'
     },
     {
       id: 'har_openheart',
@@ -407,7 +446,8 @@
       en: 'Open-Heart Aperture',
       cumMinutes: 2520,
       stepMinutes: 150,
-      desc: '진동추의 박동을 정면에서 감상하는 다이아몬드 베벨 창'
+      desc: '진동추의 박동을 정면에서 감상하는 다이아몬드 베벨 창',
+      story: '외부의 속도에'
     },
     {
       id: 'har_dial',
@@ -416,7 +456,8 @@
       en: 'Harmonic Wave Dial',
       cumMinutes: 2670,
       stepMinutes: 150,
-      desc: '사인파 결이 은은하게 퍼지는 실버 기요셰 다이얼'
+      desc: '사인파 결이 은은하게 퍼지는 실버 기요셰 다이얼',
+      story: '휩쓸리지 않는'
     },
     {
       id: 'har_case',
@@ -425,7 +466,8 @@
       en: 'Acoustic Steel Case',
       cumMinutes: 2820,
       stepMinutes: 150,
-      desc: '부드러운 곡면 베젤과 저반사 사파이어 최종 마감'
+      desc: '부드러운 곡면 베젤과 저반사 사파이어 최종 마감',
+      story: '단단한 평정.'
     }
   ];
 
@@ -438,7 +480,8 @@
       en: 'Linear Rail Plate',
       cumMinutes: 3000,
       stepMinutes: 180,
-      desc: '사라지지 않고 쌓이는 직선 궤도를 지지하는 정밀 레일 기판'
+      desc: '사라지지 않고 쌓이는 직선 궤도를 지지하는 정밀 레일 기판',
+      story: '흘려보낸 줄 알았던 시간들은'
     },
     {
       id: 'int_rack',
@@ -447,7 +490,8 @@
       en: 'Linear Gear Rack',
       cumMinutes: 3180,
       stepMinutes: 180,
-      desc: '회전 동력을 미세한 직선 전진으로 변환하는 적분 치차 랙'
+      desc: '회전 동력을 미세한 직선 전진으로 변환하는 적분 치차 랙',
+      story: '사실 어디로도 사라지지 않았다.'
     },
     {
       id: 'int_slider',
@@ -456,7 +500,8 @@
       en: 'Linear Slider Bar',
       cumMinutes: 3360,
       stepMinutes: 180,
-      desc: '누적된 찰나를 직선 게이지 위로 밀어 올리는 스틸 슬라이더'
+      desc: '누적된 찰나를 직선 게이지 위로 밀어 올리는 스틸 슬라이더',
+      story: '얇게 썰린 찰나(dt)들이'
     },
     {
       id: 'int_cam',
@@ -465,7 +510,8 @@
       en: 'Integral Calibration Cam',
       cumMinutes: 3540,
       stepMinutes: 180,
-      desc: '전 구간 등속 이동을 보정하는 비대칭 정밀 캠'
+      desc: '전 구간 등속 이동을 보정하는 비대칭 정밀 캠',
+      story: '겹겹이 쌓여,'
     },
     {
       id: 'int_scale',
@@ -474,7 +520,8 @@
       en: 'Linear Cumulative Scale',
       cumMinutes: 3720,
       stepMinutes: 180,
-      desc: '깊이감 있는 수평 눈금과 미세 버니어 스케일 다이얼'
+      desc: '깊이감 있는 수평 눈금과 미세 버니어 스케일 다이얼',
+      story: '어느새 나를 지탱하는'
     },
     {
       id: 'int_case',
@@ -483,7 +530,8 @@
       en: 'Linear Bevel Case',
       cumMinutes: 3900,
       stepMinutes: 180,
-      desc: '헤어라인 수직 브러싱과 직선 챔퍼 베젤 최종 마감'
+      desc: '헤어라인 수직 브러싱과 직선 챔퍼 베젤 최종 마감',
+      story: '가장 단단한 지층이 되어 있었다.'
     }
   ];
 
@@ -496,7 +544,8 @@
       en: 'Dynamometer Plate',
       cumMinutes: 4050,
       stepMinutes: 150,
-      desc: '축적된 에너지를 온기로 전환하는 고강성 스틸 메인플레이트'
+      desc: '축적된 에너지를 온기로 전환하는 고강성 스틸 메인플레이트',
+      story: '시간은 차가운 숫자가 아니라'
     },
     {
       id: 'jou_spring',
@@ -505,7 +554,8 @@
       en: 'High-Torque Mainspring',
       cumMinutes: 4200,
       stepMinutes: 150,
-      desc: '장시간 균일한 토크를 유지하는 이중 합금 태엽 모듈'
+      desc: '장시간 균일한 토크를 유지하는 이중 합금 태엽 모듈',
+      story: '열기였다.'
     },
     {
       id: 'jou_diff',
@@ -514,7 +564,8 @@
       en: 'Planetary Differential',
       cumMinutes: 4350,
       stepMinutes: 150,
-      desc: '와인딩과 방출의 차이를 실시간 계측하는 차동 기어열'
+      desc: '와인딩과 방출의 차이를 실시간 계측하는 차동 기어열',
+      story: '고요히 앉아 태워낸 모든 밤들이,'
     },
     {
       id: 'jou_gauge',
@@ -523,7 +574,8 @@
       en: 'Power Reserve Gauge',
       cumMinutes: 4500,
       stepMinutes: 150,
-      desc: '남은 에너지와 축적된 열량을 직관적으로 비추는 아크 게이지'
+      desc: '남은 에너지와 축적된 열량을 직관적으로 비추는 아크 게이지',
+      story: '이제 나를 내일로 밀어 올리는'
     },
     {
       id: 'jou_hands',
@@ -532,7 +584,8 @@
       en: 'Warm Brass Hands',
       cumMinutes: 4650,
       stepMinutes: 150,
-      desc: '차가운 계기 위에 온기를 더하는 황동 팁 인디케이터'
+      desc: '차가운 계기 위에 온기를 더하는 황동 팁 인디케이터',
+      story: '보이지 않는 온기(에너지)가'
     },
     {
       id: 'jou_case',
@@ -541,7 +594,8 @@
       en: 'Instrument Steel Case',
       cumMinutes: 4800,
       stepMinutes: 150,
-      desc: '정밀 계측기 감성의 새틴 316L 스틸 케이스 최종 마감'
+      desc: '정밀 계측기 감성의 새틴 316L 스틸 케이스 최종 마감',
+      story: '된다.'
     }
   ];
 
@@ -554,7 +608,8 @@
       en: '3/4 German Silver Plate',
       cumMinutes: 5000,
       stepMinutes: 200,
-      desc: '글라슈테 리빙 마감의 무도금 저먼실버 3/4 무브먼트 플레이트'
+      desc: '글라슈테 리빙 마감의 무도금 저먼실버 3/4 무브먼트 플레이트',
+      story: "고대어로 CASPER는 '보물을 지키는 자'를 뜻합니다."
     },
     {
       id: 'alg_barrel',
@@ -563,7 +618,8 @@
       en: 'Twin Mainspring Barrel',
       cumMinutes: 5200,
       stepMinutes: 200,
-      desc: '72시간 동력을 공급하고 우측 AUF/AB 바늘을 구동하는 이중 태엽통'
+      desc: '72시간 동력을 공급하고 우측 AUF/AB 바늘을 구동하는 이중 태엽통',
+      story: '아홉 개의 시계를 지나 다시 첫 번째 번호로 돌아온 오늘,'
     },
     {
       id: 'alg_date',
@@ -572,7 +628,8 @@
       en: 'Patented Outsize Date',
       cumMinutes: 5400,
       stepMinutes: 200,
-      desc: '십의 자리·일의 자리 독립 디스크가 순간 전환되는 대형 트윈 날짜창'
+      desc: '십의 자리·일의 자리 독립 디스크가 순간 전환되는 대형 트윈 날짜창',
+      story: '보이지 않는 곳에서 당신의 밤을 지키던 관리자가 비로소 금고의 문을 엽니다.'
     },
     {
       id: 'alg_dial',
@@ -581,7 +638,8 @@
       en: 'Golden Ratio Silver Dial',
       cumMinutes: 5600,
       stepMinutes: 200,
-      desc: '좌측 오프센터 로마숫자(XII·III·VI·IX)와 8개 다이아몬드 아플리케'
+      desc: '좌측 오프센터 로마숫자(XII·III·VI·IX)와 8개 다이아몬드 아플리케',
+      story: '대수학(Algebra)은 알 수 없는 미지수 x를 찾아내는 학문입니다.'
     },
     {
       id: 'alg_moon',
@@ -590,7 +648,8 @@
       en: 'Celestial Moon Phase',
       cumMinutes: 5800,
       stepMinutes: 200,
-      desc: '딥 블루 밤하늘과 별자리·실버 문 디스크가 결합된 5시 스몰세컨즈'
+      desc: '딥 블루 밤하늘과 별자리·실버 문 디스크가 결합된 5시 스몰세컨즈',
+      story: '당신이 매일 타이머를 켜며 풀어내려 했던 x, 그리고 CASPER가 그토록 소중히 보관해 온 단 하나의 보물은 흘러간 숫자가 아니었습니다.'
     },
     {
       id: 'alg_case',
@@ -599,7 +658,8 @@
       en: 'Platinum Round Case',
       cumMinutes: 6000,
       stepMinutes: 200,
-      desc: '이중 단차 미러 베젤 · 10시 푸셔 · 3시 플루티드 용두 최종 마감'
+      desc: '이중 단차 미러 베젤 · 10시 푸셔 · 3시 플루티드 용두 최종 마감',
+      story: '그 모든 시간을 견뎌내고, 지금 여기 단단히 앉아 있는 당신 자신입니다.'
     }
   ];
 
@@ -933,6 +993,7 @@
         name: part.name,
         en: part.en,
         desc: part.desc,
+        story: part.story || '',
         cumMinutes: part.cumMinutes,
         stepMinutes: part.stepMinutes,
         remainingMinutes: remainingMinutes,

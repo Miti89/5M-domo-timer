@@ -7,15 +7,33 @@
   'use strict';
 
   if (typeof load === 'function') {
+    load('version.js');
     load('timer-core.js');
     load('music-player.js');
     load('atelier-engine.js');
     load('storage.js');
+    load('cheers-engine.js');
+    load('sw.js');
   } else if (typeof require === 'function') {
+    globalThis.CASPER_VERSION = require('../version.js').CASPER_VERSION;
     globalThis.TimerCore = require('../timer-core.js');
     globalThis.ChronoMusic = require('../music-player.js');
     globalThis.CasperAtelier = require('../atelier-engine.js');
     globalThis.ChronoStorage = require('../storage.js');
+    globalThis.CasperCheers = require('../cheers-engine.js');
+    globalThis.CasperSw = require('../sw.js');
+  }
+
+  function readProjectFile(relPath) {
+    if (typeof readFile === 'function') {
+      return readFile(relPath);
+    }
+    if (typeof require === 'function') {
+      const fs = require('fs');
+      const path = require('path');
+      return fs.readFileSync(path.join(__dirname, '..', relPath), 'utf8');
+    }
+    return '';
   }
 
   const logLine = typeof print === 'function' ? print : console.log;
@@ -476,6 +494,271 @@
   const tSwRestore = TC.createTimer({ mode: 'clock' });
   const resSwLong = tSwRestore.restore(swSaved, tBase + 13 * 3600000);
   assert(resSwLong.restored === true && resSwLong.needsStopwatchReview === true && resSwLong.completedEvent === null && tSwRestore.state.running === false, 'Stopwatch running >= 12h pauses and prompts gentle check-in without auto-saving');
+
+  // -------------------------------------------------------------------------
+  // 13. CASPER v1.7 Phase 3 — Override Target, Dev Reset, Stories & Onboarding
+  // -------------------------------------------------------------------------
+
+  // 13-1. Resume vault one-shot overrideTargetMinutes preserves default focusMinutes (25m) & prefs
+  globalThis.localStorage = createMockLocalStorage();
+  const basePrefs = CS.loadPrefs();
+  basePrefs.focusMinutes = 25;
+  basePrefs.breakMinutes = 5;
+  basePrefs.countdownMinutes = 25;
+  CS.savePrefs(basePrefs);
+
+  const tResume = TC.createTimer({
+    mode: 'pomodoro',
+    focusMinutes: basePrefs.focusMinutes,
+    breakMinutes: basePrefs.breakMinutes,
+    countdownMinutes: basePrefs.countdownMinutes
+  });
+  tResume.start(tBase);
+  // Archive at 7m -> 18m remaining
+  const remAfter7m = Math.ceil((tResume.getTargetMs() - tResume.getElapsedMs(tBase + 7 * 60000)) / 60000);
+  assert(remAfter7m === 18, '25m focus archived at 7m leaves 18m remaining');
+  tResume.reset();
+  tResume.setMode('pomodoro');
+  tResume.setOverrideTargetMinutes(remAfter7m);
+  assert(tResume.getTargetMs() === 18 * 60000, 'Resume session uses one-shot 18m overrideTargetMinutes');
+  assert(tResume.state.focusMinutes === 25, 'Default focusMinutes stays 25m during 18m resumed session');
+
+  // Verify serialize/restore keeps overrideTargetMinutes intact
+  tResume.start(tBase + 8 * 60000);
+  const serOverride = tResume.serialize(tBase + 10 * 60000);
+  assert(serOverride.overrideTargetMinutes === 18 && serOverride.focusMinutes === 25, 'serialize preserves overrideTargetMinutes=18 and focusMinutes=25');
+  const tResumeRestored = TC.createTimer({ mode: 'clock' });
+  tResumeRestored.restore(serOverride, tBase + 10 * 60000);
+  assert(tResumeRestored.state.overrideTargetMinutes === 18 && tResumeRestored.getTargetMs() === 18 * 60000, 'restore preserves one-shot overrideTargetMinutes');
+
+  // Complete the 18m resumed session -> next focus round returns to 25m and prefs remain 25m
+  const evt18 = tResume.tick(tBase + 8 * 60000 + 18 * 60000);
+  assert(evt18 !== null && evt18.minutes === 18, 'Resumed session completes at 18m');
+  assert(tResume.state.overrideTargetMinutes === null, 'overrideTargetMinutes clears automatically upon completion');
+  assert(tResume.state.phase === 'break' && tResume.getTargetMs() === 5 * 60000, 'Transitions to 5m break after resumed focus');
+  // Complete 5m break -> next focus round is 25m
+  tResume.start(tBase + 30 * 60000);
+  const evtBrk = tResume.tick(tBase + 35 * 60000);
+  assert(evtBrk !== null && evtBrk.finishedPhase === 'break', '5m break completes');
+  assert(tResume.state.phase === 'focus' && tResume.getTargetMs() === 25 * 60000 && tResume.state.focusMinutes === 25, 'Next focus round returns to original 25m');
+  assert(CS.loadPrefs().focusMinutes === 25, 'Saved prefs.focusMinutes remains 25m');
+
+  // Onboarding 5m countdown uses one-shot override and unlocks BINARY Part 01 (5m)
+  const tOnb = TC.createTimer({ mode: 'clock', countdownMinutes: 25 });
+  tOnb.setMode('countdown');
+  tOnb.setOverrideTargetMinutes(5);
+  assert(tOnb.getTargetMs() === 5 * 60000 && tOnb.state.countdownMinutes === 25, 'Onboarding 5m countdown does not alter default countdownMinutes (25m)');
+  tOnb.start(tBase);
+  const evtOnb = tOnb.tick(tBase + 5 * 60000);
+  assert(evtOnb !== null && evtOnb.minutes === 5 && tOnb.state.overrideTargetMinutes === null && tOnb.getTargetMs() === 25 * 60000, 'After 5m onboarding countdown completes, target reverts to 25m');
+  CS.addLog({ subject: '전공', mode: 'countdown', minutes: 5, endedAt: tBase + 5 * 60000 });
+  const snapAfter5m = CA.computeAtelierSnapshot(CS.loadLogs(), CA.sanitizeAtelierState({ devMode: false }), CS.getLifetimeMinutes());
+  assert(snapAfter5m.readyPart && snapAfter5m.readyPart.id === 'mainplate', '5m onboarding session makes BINARY Part 01 immediately ready to assemble');
+
+  // 13-2. Dev-mode-only complete progress reset (devResetAllProgress)
+  CS.addLog({ subject: '코딩', mode: 'pomodoro', minutes: 60, endedAt: tBase + 10 * 60000 });
+  const beforeResetLifetime = CS.getLifetimeMinutes();
+  assert(beforeResetLifetime === 65, 'Lifetime is 65m before dev reset test');
+  // Refuses when devMode is false
+  const blockedReset = CS.devResetAllProgress(false);
+  assert(blockedReset === false && CS.getLifetimeMinutes() === 65 && CS.loadLogs().length === 2, 'devResetAllProgress(false) refuses and leaves lifetimeMinutes & logs intact');
+  // Succeeds when devMode is true
+  const allowedReset = CS.devResetAllProgress(true);
+  assert(allowedReset === true && CS.getLifetimeMinutes() === 0 && CS.loadLogs().length === 0, 'devResetAllProgress(true) resets lifetimeMinutes to 0 and clears logs');
+  const resetAtelier = CS.loadAtelier();
+  assert(CA.BUILD_ORDER.every(function (cid) { return Array.isArray(resetAtelier.assembledParts[cid]) && resetAtelier.assembledParts[cid].length === 0; }), 'devResetAllProgress(true) clears all 10 calibers assembledParts');
+
+  // 13-3. All 60 parts have non-empty story and concatenated pieces match exact appendix text (ignoring whitespace)
+  const EXPECTED_STORIES = {
+    'cal-b': '시작하지 않은 0의 세계와, 이미 발을 디딘 1의 세계 사이에는 어정쩡한 회색이 없다. 망설임을 반으로 자르고, 단 한 번의 호흡으로 이쪽으로 건너온다.',
+    'cal-d': '겉보기엔 어제와 똑같은 하루 같아도, 바늘이 1밀리미터 움직인 그 미세한 틈(Δ) 사이로 이미 다른 내가 자라고 있다.',
+    'cal-c': '공이 가장 빠르게 굴러내리는 길은 직선이 아니라, 아래로 깊게 떨어졌다가 다시 솟아오르는 곡선이다. 집중이 무너지고 다시 제자리로 돌아오는 그 궤적 자체가, 사실은 가장 빠른 길이었다.',
+    'cal-e': '완벽한 원은 중심이 하나지만, 타원은 두 개의 초점을 품고 돈다. 때로 멀어지고 삐뚤어지더라도 결국 다시 돌아오게 만드는 중력. 완벽하지 않아서 오히려 오래 버티는 나의 궤도.',
+    'cal-f': '오늘 책상 앞에서 보낸 보잘것없는 5분을 끝없이 확대해 보면, 거기엔 내 일생의 모양이 그대로 닮아 있다. 작은 하루의 무늬가 결국 거대한 나를 빚는다.',
+    'cal-g': '요란한 계획과 불안한 장식을 모두 걷어내고 오직 선과 점만 남겼을 때, 비로소 눈앞의 세계가 고요하고 선명해진다.',
+    'cal-h': '바깥의 세상은 늘 불협화음으로 밀려오지만, 내 안의 추는 오직 제 진동수만 기억한다. 외부의 속도에 휩쓸리지 않는 단단한 평정.',
+    'cal-i': '흘려보낸 줄 알았던 시간들은 사실 어디로도 사라지지 않았다. 얇게 썰린 찰나(dt)들이 겹겹이 쌓여, 어느새 나를 지탱하는 가장 단단한 지층이 되어 있었다.',
+    'cal-j': '시간은 차가운 숫자가 아니라 열기였다. 고요히 앉아 태워낸 모든 밤들이, 이제 나를 내일로 밀어 올리는 보이지 않는 온기(에너지)가 된다.',
+    'cal-a': "고대어로 CASPER는 '보물을 지키는 자'를 뜻합니다. 아홉 개의 시계를 지나 다시 첫 번째 번호로 돌아온 오늘, 보이지 않는 곳에서 당신의 밤을 지키던 관리자가 비로소 금고의 문을 엽니다. 대수학(Algebra)은 알 수 없는 미지수 x를 찾아내는 학문입니다. 당신이 매일 타이머를 켜며 풀어내려 했던 x, 그리고 CASPER가 그토록 소중히 보관해 온 단 하나의 보물은 흘러간 숫자가 아니었습니다. 그 모든 시간을 견뎌내고, 지금 여기 단단히 앉아 있는 당신 자신입니다."
+  };
+  const stripWs = function (s) { return String(s || '').replace(/\s+/g, ''); };
+  CA.BUILD_ORDER.forEach(function (cid) {
+    const parts = CA.PARTS_BY_CALIBER[cid];
+    assert(Array.isArray(parts) && parts.length === 6, cid + ' has 6 parts for story check');
+    const allNonEmpty = parts.every(function (p) { return typeof p.story === 'string' && p.story.trim().length > 0; });
+    assert(allNonEmpty, cid + ' all 6 parts have non-empty story strings');
+    const joined = parts.map(function (p) { return p.story; }).join(' ');
+    assert(stripWs(joined) === stripWs(EXPECTED_STORIES[cid]), cid + ' joined part stories exactly match appendix text (ignoring whitespace)');
+  });
+
+  // 13-4. isNewUser() detection (returns false if any log, lifetime>0, atelier key, or onboardingSeen exists)
+  globalThis.localStorage = createMockLocalStorage();
+  assert(CS.isNewUser() === true, 'Completely empty storage is detected as new user');
+  assert(CS.isNewUser() === true, 'Repeated isNewUser() calls do not mutate storage');
+
+  // With onboardingSeen flag
+  CS.saveNarrativeMeta({ onboardingSeen: true, prologueSeen: false, epilogueSeen: false, hintsSeen: { deck: false, crown: false } });
+  assert(CS.isNewUser() === false, 'onboardingSeen=true suppresses onboarding');
+
+  // With logs only
+  globalThis.localStorage = createMockLocalStorage();
+  globalThis.localStorage.setItem('no5_chrono_logs_v1', JSON.stringify([{ id: 'l1', minutes: 10, dateKey: '2026-11-25' }]));
+  assert(CS.isNewUser() === false, 'Existing logs suppress onboarding');
+
+  // With lifetimeMinutes > 0 only
+  globalThis.localStorage = createMockLocalStorage();
+  globalThis.localStorage.setItem('no1_pro_lifetime_v1', JSON.stringify({ minutes: 15 }));
+  assert(CS.isNewUser() === false, 'Positive lifetimeMinutes suppresses onboarding');
+
+  // With v1.6 / Phase 2 atelier state key only (even at 0 logs & 0 lifetime)
+  globalThis.localStorage = createMockLocalStorage();
+  globalThis.localStorage.setItem('no1_pro_atelier_v1', JSON.stringify({ activeWatch: 'cal-b', devMode: false, assembledParts: {} }));
+  assert(CS.isNewUser() === false, 'Existing atelier state (v1.6 / Phase 2 user) suppresses onboarding');
+
+  // -------------------------------------------------------------------------
+  // 14. CASPER v1.7 Phase 4 — Version Sync, Legacy Backup & SW Routing Tests
+  // -------------------------------------------------------------------------
+  const VER = globalThis.CASPER_VERSION;
+  const SW = globalThis.CasperSw;
+  assert(typeof VER === 'string' && /^\d+\.\d+\.\d+$/.test(VER), 'CASPER_VERSION is a valid semver string (' + VER + ')');
+  assert(SW && SW.CACHE_NAME === 'casper-v' + VER, 'sw.js CACHE_NAME matches casper-v' + VER);
+
+  // 14-1. All ?v= queries in index.html and sw.js ASSETS must match CASPER_VERSION
+  const htmlSrc = readProjectFile('index.html');
+  const htmlQueryMatches = htmlSrc.match(/\?v=([0-9]+\.[0-9]+\.[0-9]+)/g) || [];
+  assert(htmlQueryMatches.length >= 13, 'index.html contains versioned asset queries (found ' + htmlQueryMatches.length + ')');
+  assert(htmlQueryMatches.every(function (q) { return q === '?v=' + VER; }), 'All ?v= queries in index.html match CASPER_VERSION (' + VER + ')');
+
+  const swSrc = readProjectFile('sw.js');
+  assert(swSrc.indexOf("importScripts('version.js')") !== -1, "sw.js loads version.js via importScripts('version.js')");
+  const swAssetQueries = (SW.ASSETS || []).filter(function (a) { return a.indexOf('?v=') !== -1; });
+  assert(swAssetQueries.length >= 13, 'sw.js ASSETS includes versioned static assets (found ' + swAssetQueries.length + ')');
+  assert(swAssetQueries.every(function (a) { return a.endsWith('?v=' + VER); }), 'All ?v= entries in sw.js ASSETS match CASPER_VERSION (' + VER + ')');
+
+  // Verify PNG icons cached in sw.js and declared in manifest.json
+  const reqIcons = ['./icon-192.png', './icon-512.png', './icon-192-maskable.png', './icon-512-maskable.png', './apple-touch-icon.png'];
+  reqIcons.forEach(function (ic) {
+    assert(SW.ASSETS.includes(ic), 'sw.js ASSETS caches ' + ic);
+  });
+  const manifestObj = JSON.parse(readProjectFile('manifest.json'));
+  assert(manifestObj.theme_color === '#080B0F' && manifestObj.background_color === '#080B0F', 'manifest theme_color matches background_color (#080B0F)');
+  assert(manifestObj.icons.some(function (i) { return i.sizes === '192x192' && i.purpose === 'any' && i.type === 'image/png'; }), 'manifest includes 192x192 any PNG');
+  assert(manifestObj.icons.some(function (i) { return i.sizes === '512x512' && i.purpose === 'any' && i.type === 'image/png'; }), 'manifest includes 512x512 any PNG');
+  assert(manifestObj.icons.some(function (i) { return i.sizes === '192x192' && i.purpose === 'maskable' && i.type === 'image/png'; }), 'manifest includes 192x192 maskable PNG');
+  assert(manifestObj.icons.some(function (i) { return i.sizes === '512x512' && i.purpose === 'maskable' && i.type === 'image/png'; }), 'manifest includes 512x512 maskable PNG');
+
+  // 14-2. Legacy backup import (app: 'NO.1 PRO', schema: 2, without lifetimeMinutes)
+  globalThis.localStorage = createMockLocalStorage();
+  const legacyBackup = JSON.stringify({
+    app: 'NO.1 PRO',
+    schema: 2,
+    exportedAt: '2026-10-01T00:00:00.000Z',
+    prefs: { focusMinutes: 50, breakMinutes: 10 },
+    atelier: {
+      activeWatch: 'no2-jump',
+      devMode: false,
+      assembledParts: {
+        'no2-jump': ['mainplate', 'barrel']
+      }
+    },
+    logs: [
+      { id: 'legacy-1', subject: '전공', mode: 'pomodoro', minutes: 25, memo: 'v1.6 기록', endedAt: tBase - 7200000, dateKey: '2026-10-01' },
+      { id: 'legacy-2', subject: '코딩', mode: 'countdown', minutes: 50, memo: '', endedAt: tBase - 3600000, dateKey: '2026-10-01' }
+    ]
+  });
+  const legacyRes = CS.importBackupJson(legacyBackup);
+  assert(legacyRes.added === 2 && legacyRes.total === 2 && legacyRes.lifetimeMinutes === 75, 'Legacy NO.1 PRO schema 2 backup imports cleanly and computes lifetimeMinutes=75');
+  assert(CS.getLifetimeMinutes() === 75, 'Lifetime minutes updated to 75m after legacy backup import');
+  const legacyAtelier = CS.loadAtelier();
+  assert(legacyAtelier.assembledParts['cal-b'].length === 2 && legacyAtelier.assembledParts['cal-b'][0] === 'mainplate', 'Legacy no2-jump parts migrate cleanly to cal-b on import');
+
+  // 14-3. Service Worker pickStrategy(url, mode, selfOrigin) routing rules
+  const origin = 'https://casper.example.com';
+  assert(SW.pickStrategy(origin + '/', 'navigate', origin) === 'network-first', 'Root navigation uses network-first');
+  assert(SW.pickStrategy(origin + '/index.html', 'navigate', origin) === 'network-first', 'index.html navigation uses network-first');
+  assert(SW.pickStrategy(origin + '/app.js?v=' + VER, 'no-cors', origin) === 'cache-first', 'Versioned JS asset uses cache-first');
+  assert(SW.pickStrategy(origin + '/styles.css?v=' + VER, 'cors', origin) === 'cache-first', 'Versioned CSS asset uses cache-first');
+  assert(SW.pickStrategy(origin + '/icon-192.png', 'no-cors', origin) === 'cache-first', 'Local PNG icon uses cache-first');
+  assert(SW.pickStrategy('https://music.youtube.com/watch?v=abc123', 'no-cors', origin) === 'passthrough', 'External YouTube Music URL (even with ?v=) uses passthrough');
+  assert(SW.pickStrategy('https://www.youtube.com/embed/xyz', 'cors', origin) === 'passthrough', 'External YouTube embed uses passthrough');
+  assert(SW.pickStrategy(origin + '/unversioned/data.json', 'cors', origin) === 'passthrough', 'Unversioned non-icon request uses passthrough');
+  assert(SW.pickStrategy(origin + '/cheers.json', 'cors', origin) === 'network-first', 'cheers.json uses network-first strategy');
+  assert(SW.ASSETS.includes('./cheers.json'), 'sw.js ASSETS includes ./cheers.json');
+
+  // -------------------------------------------------------------------------
+  // 15. CASPER v1.7 Finisher One-Line Cheers Tests
+  // -------------------------------------------------------------------------
+  const CH = globalThis.CasperCheers;
+  assert(CH && typeof CH.validateCheerText === 'function', 'CasperCheers module is loaded');
+
+  // 15-1. Visibility gate: hidden until NO.1 ALGEBRA is complete (except devMode)
+  const incompleteSnap = CA.computeAtelierSnapshot([], CA.sanitizeAtelierState({ devMode: false }), 100);
+  assert(CH.canComposeCheer(incompleteSnap, false) === false, 'Cheer composer hidden when ALGEBRA is incomplete and devMode=false');
+  assert(CH.canComposeCheer(incompleteSnap, true) === true, 'Cheer composer previewable when devMode=true');
+
+  const fullParts = {};
+  CA.BUILD_ORDER.forEach(function (cid) {
+    fullParts[cid] = CA.PARTS_BY_CALIBER[cid].map(function (p) { return p.id; });
+  });
+  const completeSnap = CA.computeAtelierSnapshot([], CA.sanitizeAtelierState({ devMode: false, assembledParts: fullParts }), 6000);
+  assert(CH.canComposeCheer(completeSnap, false) === true, 'Cheer composer unlocked when NO.1 ALGEBRA is complete');
+
+  // 15-2. Input validation: empty/whitespace, >60 chars, URL, email, phone blocked
+  assert(CH.validateCheerText('   ').ok === false, 'Whitespace-only cheer is rejected');
+  assert(CH.validateCheerText('가'.repeat(60)).ok === true, 'Exactly 60-char cheer is accepted');
+  assert(CH.validateCheerText('가'.repeat(61)).ok === false, '61-char cheer is rejected');
+  assert(CH.validateCheerText('힘내세요 https://example.com').ok === false, 'URL in cheer is rejected');
+  assert(CH.validateCheerText('www.naver.com 방문하세요').ok === false, 'www URL in cheer is rejected');
+  assert(CH.validateCheerText('연락은 test@example.com 으로').ok === false, 'Email in cheer is rejected');
+  assert(CH.validateCheerText('전화 010-1234-5678 주세요').ok === false, 'Phone number in cheer is rejected');
+  assert(CH.validateCheerText('오늘의 5분도 분명 쌓이고 있어요.').ok === true, 'Clean Korean cheer is accepted');
+
+  // 15-3. Submit URL builder: encodes message; returns null when CHEERS_SUBMIT_URL is empty
+  assert(CH.buildSubmitUrl('오늘도 잘 버텼어요', '') === null, 'Empty submit URL returns null (submit disabled)');
+  const formBase = 'https://docs.google.com/forms/d/e/1FAIpQL/viewform?usp=pp_url&entry.999=';
+  const builtUrl = CH.buildSubmitUrl('오늘도 잘 버텼어요', formBase);
+  assert(builtUrl === formBase + encodeURIComponent('오늘도 잘 버텼어요'), 'Submit URL appends URL-encoded cheer text only');
+  assert(CH.buildSubmitUrl('bad@email.com', formBase) === null, 'Invalid cheer text returns null submit URL');
+
+  // 15-4. Daily display rules: once per day, full cycle before repeat, disabled when off
+  const cheersJson = JSON.parse(readProjectFile('cheers.json'));
+  const parsedCheers = CH.parseCheersPayload(cheersJson);
+  assert(parsedCheers.length === 3 && parsedCheers.every(function (c) { return c.sample === true; }), 'cheers.json loads 3 sample messages');
+
+  // Disabled setting -> never shows
+  const offRes = CH.pickDailyCheer(parsedCheers, {}, '2026-11-25', false);
+  assert(offRes.message === null, 'Cheer does not show when cheersEnabled=false');
+
+  // Missing / failed cheers.json payload -> gracefully hides with null and no throw
+  assert(CH.parseCheersPayload(null).length === 0, 'Missing cheers.json payload returns empty array without error');
+  assert(CH.pickDailyCheer([], {}, '2026-11-25', true).message === null, 'Empty cheer list hides gracefully');
+
+  // Day 1 -> c001, same day second call -> null (once per day)
+  const d1 = CH.pickDailyCheer(parsedCheers, {}, '2026-11-25', true);
+  assert(d1.message && d1.message.id === 'c001', 'Day 1 shows first cheer (c001)');
+  const d1Again = CH.pickDailyCheer(parsedCheers, d1.nextState, '2026-11-25', true);
+  assert(d1Again.message === null, 'Same day second trigger shows nothing (max once per day)');
+
+  // Day 2 -> c002, Day 3 -> c003 (no repeats before all seen)
+  const d2 = CH.pickDailyCheer(parsedCheers, d1.nextState, '2026-11-26', true);
+  const d3 = CH.pickDailyCheer(parsedCheers, d2.nextState, '2026-11-27', true);
+  assert(d2.message && d2.message.id === 'c002', 'Day 2 shows unseen cheer (c002)');
+  assert(d3.message && d3.message.id === 'c003', 'Day 3 shows unseen cheer (c003)');
+
+  // Day 4 -> cycle resets and repeats without immediate back-to-back c003
+  const d4 = CH.pickDailyCheer(parsedCheers, d3.nextState, '2026-11-28', true);
+  assert(d4.message && d4.message.id === 'c001', 'Day 4 restarts cycle after all cheers have been seen');
+
+  // 15-5. Local myCheer backup export & restore
+  globalThis.localStorage = createMockLocalStorage();
+  const nMeta = CS.loadNarrativeMeta();
+  nMeta.myCheer = '당신의 5분도 분명 빛나요.';
+  CS.saveNarrativeMeta(nMeta);
+  const cheerBackup = CS.exportBackupJson();
+  assert(JSON.parse(cheerBackup).myCheer === '당신의 5분도 분명 빛나요.', 'exportBackupJson includes myCheer');
+  globalThis.localStorage = createMockLocalStorage();
+  CS.importBackupJson(cheerBackup);
+  assert(CS.loadNarrativeMeta().myCheer === '당신의 5분도 분명 빛나요.', 'importBackupJson restores myCheer');
 
   logLine('TEST SUMMARY: ' + passed + ' passed, ' + failed + ' failed');
   if (failed > 0) {

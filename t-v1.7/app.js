@@ -19,10 +19,18 @@
     summary: '일일 요약'
   };
 
+  // Check brand-new user BEFORE loadAtelier() touches any storage flags
+  const isBrandNewUserOnBoot = Boolean(
+    window.ChronoStorage && typeof window.ChronoStorage.isNewUser === 'function' && window.ChronoStorage.isNewUser()
+  );
+
   // Load persisted user preferences & watchmaker atelier state
   const prefs = window.ChronoStorage.loadPrefs();
   prefs.theme = 'steel';
   let atelierState = window.ChronoStorage.loadAtelier();
+  let narrativeMeta = (window.ChronoStorage && typeof window.ChronoStorage.loadNarrativeMeta === 'function')
+    ? window.ChronoStorage.loadNarrativeMeta()
+    : { onboardingSeen: false, prologueSeen: false, epilogueSeen: false, hintsSeen: { deck: false, crown: false } };
   let mountedCaliberId = null;
   const timer = window.TimerCore.createTimer({
     mode: 'clock',
@@ -61,6 +69,24 @@
   let lastTitleText = '';
   let lastDigitalText = '';
   let lastPhaseKey = '';
+  let pendingPrologueAfterReflection = false;
+  let prologueCardIndex = 0;
+  let expandedCodexCaliberId = null;
+  let activeHintKey = null;
+  let swRegistration = null;
+  let cheersMessages = [];
+
+  const PROLOGUE_CARDS = [
+    '세상에서 가장 귀하지만, 손가락 사이로 가장 쉽게 흩어지는 보물은 시간입니다.',
+    'CASPER는 당신의 책상 한쪽에 소리 없이 머무는 보이지 않는 관리자입니다.',
+    '집중이 무너지는 밤에도, 겨우 5분을 버텨낸 오후에도,\n당신이 흘려보낸 줄 알았던 찰나들을 톱니바퀴 속에 고이 보관합니다.\n이제, 흩어진 시간을 조립할 차례입니다.'
+  ];
+
+  const FEATURE_HINTS = {
+    deck: '우측 상단 [설정]을 누르면 시계 뒷면(공방·기록·사운드)으로 넘어갑니다.',
+    crown: '시계 옆 용두를 클릭해 뽑은 뒤 돌리면 시간을 ±1분·±5분 조절할 수 있어요.',
+    screenOn: '화면을 켜 두면 끝나는 순간 정확히 알려 드려요'
+  };
 
   // DOM references
   const dom = {
@@ -81,6 +107,7 @@
     atelierBarFill: document.getElementById('atelierBarFill'),
     atelierPartsGrid: document.getElementById('atelierPartsGrid'),
     btnAssemblePart: document.getElementById('btnAssemblePart'),
+    atelierStoryFeedback: document.getElementById('atelierStoryFeedback'),
     atelierCaliberList: document.getElementById('atelierCaliberList'),
     reflectionAtelierReward: document.getElementById('reflectionAtelierReward'),
     stageStatusStrip: document.getElementById('stageStatusStrip'),
@@ -132,9 +159,29 @@
     backupPromptBanner: document.getElementById('backupPromptBanner'),
     backupPromptText: document.getElementById('backupPromptText'),
     iosInstallBanner: document.getElementById('iosInstallBanner'),
+    featureHintBanner: document.getElementById('featureHintBanner'),
+    featureHintText: document.getElementById('featureHintText'),
+    cheerNoticeBanner: document.getElementById('cheerNoticeBanner'),
+    cheerNoticeText: document.getElementById('cheerNoticeText'),
+    chkCheersEnabled: document.getElementById('chkCheersEnabled'),
+    reflectionCheerBox: document.getElementById('reflectionCheerBox'),
+    reflectionCheerText: document.getElementById('reflectionCheerText'),
+    cheerComposeModal: document.getElementById('cheerComposeModal'),
+    cheerComposeForm: document.getElementById('cheerComposeForm'),
+    cheerComposeInput: document.getElementById('cheerComposeInput'),
+    cheerComposeError: document.getElementById('cheerComposeError'),
+    cheerComposeCount: document.getElementById('cheerComposeCount'),
+    btnCheerSubmitExternal: document.getElementById('btnCheerSubmitExternal'),
     stopwatchReviewModal: document.getElementById('stopwatchReviewModal'),
     stopwatchReviewForm: document.getElementById('stopwatchReviewForm'),
     stopwatchReviewMinutes: document.getElementById('stopwatchReviewMinutes'),
+    onboardingOverlay: document.getElementById('onboardingOverlay'),
+    prologueOverlay: document.getElementById('prologueOverlay'),
+    prologueStage: document.getElementById('prologueStage'),
+    prologueCardText: document.getElementById('prologueCardText'),
+    prologueDots: document.getElementById('prologueDots'),
+    btnPrologueNext: document.getElementById('btnPrologueNext'),
+    epilogueOverlay: document.getElementById('epilogueOverlay'),
     timeConfigCard: document.getElementById('timeConfigCard'),
     timeConfigTitle: document.getElementById('timeConfigTitle'),
     roundIndicator: document.getElementById('roundIndicator'),
@@ -253,17 +300,41 @@
   function sendBackgroundNotification(title, body) {
     if (!document.hidden) return;
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-    try {
-      const notif = new Notification(title, {
-        body: body,
-        tag: 'casper-timer-complete',
-        silent: Boolean(prefs.mannerMode)
-      });
-      notif.onclick = function () {
-        try { window.focus(); } catch (e) {}
-        notif.close();
-      };
-    } catch (e) {}
+    const notifOpts = {
+      body: body,
+      tag: 'casper-timer-complete',
+      icon: './icon-192.png',
+      silent: Boolean(prefs.mannerMode)
+    };
+    const fallbackNotify = function () {
+      try {
+        const notif = new Notification(title, notifOpts);
+        notif.onclick = function () {
+          try { window.focus(); } catch (e) {}
+          notif.close();
+        };
+      } catch (e) {}
+    };
+    if (swRegistration && typeof swRegistration.showNotification === 'function') {
+      try {
+        const p = swRegistration.showNotification(title, notifOpts);
+        if (p && typeof p.catch === 'function') p.catch(fallbackNotify);
+        return;
+      } catch (e) {}
+    }
+    if ('serviceWorker' in navigator && typeof navigator.serviceWorker.getRegistration === 'function') {
+      try {
+        navigator.serviceWorker.getRegistration().then(function (reg) {
+          if (reg && typeof reg.showNotification === 'function') {
+            swRegistration = reg;
+            return reg.showNotification(title, notifOpts);
+          }
+          fallbackNotify();
+        }).catch(fallbackNotify);
+        return;
+      } catch (e) {}
+    }
+    fallbackNotify();
   }
 
   // Phase 1-3: Active session persistence
@@ -336,6 +407,248 @@
     if (changed) {
       window.ChronoStorage.saveSafetyMeta(safety);
     }
+
+    // Phase 3-2: Queue prologue once after the user's first recorded session
+    if (!narrativeMeta.prologueSeen) {
+      pendingPrologueAfterReflection = true;
+    }
+  }
+
+  // Phase 3: Narrative, Onboarding, Prologue, Epilogue & One-Time Hints
+  function saveNarrativeState() {
+    if (window.ChronoStorage && typeof window.ChronoStorage.saveNarrativeMeta === 'function') {
+      window.ChronoStorage.saveNarrativeMeta(narrativeMeta);
+    }
+  }
+
+  function markFeatureHintSeen(hintKey) {
+    if (!hintKey || !narrativeMeta.hintsSeen) return;
+    if (!narrativeMeta.hintsSeen[hintKey]) {
+      narrativeMeta.hintsSeen[hintKey] = true;
+      saveNarrativeState();
+    }
+    if (activeHintKey === hintKey && dom.featureHintBanner) {
+      dom.featureHintBanner.hidden = true;
+      activeHintKey = null;
+    }
+  }
+
+  function maybeShowFeatureHint(hintKey) {
+    if (!hintKey || !FEATURE_HINTS[hintKey] || !dom.featureHintBanner || !dom.featureHintText) return;
+    if (narrativeMeta.hintsSeen && narrativeMeta.hintsSeen[hintKey]) return;
+    if (deckFlipped && hintKey === 'deck') {
+      markFeatureHintSeen('deck');
+      return;
+    }
+    activeHintKey = hintKey;
+    narrativeMeta.hintsSeen[hintKey] = true;
+    saveNarrativeState();
+    dom.featureHintText.textContent = FEATURE_HINTS[hintKey];
+    dom.featureHintBanner.hidden = false;
+  }
+
+  function dismissFeatureHint() {
+    activeHintKey = null;
+    if (dom.featureHintBanner) dom.featureHintBanner.hidden = true;
+  }
+
+  function openOnboardingOverlay() {
+    if (!dom.onboardingOverlay) return;
+    narrativeMeta.onboardingSeen = true;
+    saveNarrativeState();
+    dom.onboardingOverlay.hidden = false;
+  }
+
+  function closeOnboardingOverlay() {
+    if (dom.onboardingOverlay) dom.onboardingOverlay.hidden = true;
+  }
+
+  function startOnboardingFiveMinutes() {
+    closeOnboardingOverlay();
+    clearResetConfirm();
+    clearCompletionTimer();
+    demoActive = false;
+    timer.setMode('countdown');
+    timer.setOverrideTargetMinutes(5);
+    requestNotificationPermissionOnce();
+    window.ChronoAudio.ensureContext();
+    timer.start(Date.now());
+    persistActiveSession();
+    scheduleCompletionTimer();
+    syncModeUI();
+    syncWakeLock(true);
+    syncMusicWithTimer(true);
+    syncResumeVaultBanner();
+    maybeShowFeatureHint('screenOn');
+    showToast('5분만 함께 앉아볼까요. 끝나면 첫 부품이 열립니다.', 3400);
+  }
+
+  function renderPrologueCard() {
+    if (!dom.prologueCardText) return;
+    const idx = Math.max(0, Math.min(PROLOGUE_CARDS.length - 1, prologueCardIndex));
+    dom.prologueCardText.textContent = PROLOGUE_CARDS[idx];
+    if (dom.prologueDots) {
+      const dots = dom.prologueDots.querySelectorAll('.prologue-dot');
+      dots.forEach(function (dot, i) {
+        dot.classList.toggle('is-active', i === idx);
+      });
+    }
+    if (dom.btnPrologueNext) {
+      dom.btnPrologueNext.textContent = idx >= PROLOGUE_CARDS.length - 1 ? '시작하기' : '다음';
+    }
+  }
+
+  function openPrologueModal() {
+    if (!dom.prologueOverlay) return;
+    prologueCardIndex = 0;
+    pendingPrologueAfterReflection = false;
+    if (!narrativeMeta.prologueSeen) {
+      narrativeMeta.prologueSeen = true;
+      saveNarrativeState();
+    }
+    renderPrologueCard();
+    dom.prologueOverlay.hidden = false;
+  }
+
+  function closePrologueModal() {
+    if (dom.prologueOverlay) dom.prologueOverlay.hidden = true;
+    if (!deckFlipped) {
+      maybeShowFeatureHint('deck');
+    }
+  }
+
+  function advancePrologueCard() {
+    if (prologueCardIndex < PROLOGUE_CARDS.length - 1) {
+      prologueCardIndex += 1;
+      renderPrologueCard();
+    } else {
+      closePrologueModal();
+    }
+  }
+
+  function openEpilogueOverlay() {
+    if (!dom.epilogueOverlay) return;
+    if (!narrativeMeta.epilogueSeen) {
+      narrativeMeta.epilogueSeen = true;
+      saveNarrativeState();
+    }
+    dom.epilogueOverlay.classList.remove('is-animating');
+    dom.epilogueOverlay.hidden = false;
+    void dom.epilogueOverlay.offsetWidth;
+    dom.epilogueOverlay.classList.add('is-animating');
+  }
+
+  function closeEpilogueOverlay() {
+    if (!dom.epilogueOverlay) return;
+    const wasOpen = !dom.epilogueOverlay.hidden;
+    dom.epilogueOverlay.hidden = true;
+    dom.epilogueOverlay.classList.remove('is-animating');
+    if (wasOpen && canComposeCurrentCheer()) {
+      openCheerComposeModal();
+    }
+  }
+
+  // Finisher One-Line Cheers: silent loader, daily trigger, and composer modal
+  function loadCheersPool() {
+    if (!window.CasperCheers || typeof fetch !== 'function') return;
+    if (location.protocol === 'file:') return; // file:// skips fetch silently without error
+    fetch('./cheers.json').then(function (resp) {
+      if (!resp || !resp.ok) return null;
+      return resp.json();
+    }).then(function (data) {
+      cheersMessages = window.CasperCheers.parseCheersPayload(data);
+    }).catch(function () {
+      cheersMessages = [];
+    });
+  }
+
+  function getTodayLocalDateKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function canComposeCurrentCheer() {
+    if (!window.CasperCheers || !window.CasperAtelier) return false;
+    const snap = window.CasperAtelier.computeAtelierSnapshot(
+      window.ChronoStorage.loadLogs(),
+      atelierState,
+      window.ChronoStorage.getLifetimeMinutes()
+    );
+    return window.CasperCheers.canComposeCheer(snap, Boolean(atelierState.devMode));
+  }
+
+  function maybeConsumeDailyCheer() {
+    if (!window.CasperCheers) return null;
+    const enabled = prefs.cheersEnabled !== false;
+    const res = window.CasperCheers.pickDailyCheer(
+      cheersMessages,
+      narrativeMeta.cheerState,
+      getTodayLocalDateKey(),
+      enabled
+    );
+    if (!res || !res.message) return null;
+    narrativeMeta.cheerState = res.nextState;
+    saveNarrativeState();
+    return res.message.text;
+  }
+
+  function showCheerBanner(text) {
+    if (!text || !dom.cheerNoticeBanner || !dom.cheerNoticeText) return;
+    dom.cheerNoticeText.textContent = text;
+    dom.cheerNoticeBanner.hidden = false;
+  }
+
+  function dismissCheerBanner() {
+    if (dom.cheerNoticeBanner) dom.cheerNoticeBanner.hidden = true;
+  }
+
+  function maybeShowReturningCheer() {
+    if (!window.CasperCheers) return;
+    const logs = window.ChronoStorage.loadLogs();
+    if (window.CasperCheers.isReturningAfterDays(logs, Date.now(), 2)) {
+      const cheerText = maybeConsumeDailyCheer();
+      if (cheerText) showCheerBanner(cheerText);
+    }
+  }
+
+  function syncCheerComposeCounter() {
+    if (!dom.cheerComposeInput || !dom.cheerComposeCount) return;
+    const len = dom.cheerComposeInput.value.length;
+    const maxLen = (window.CasperCheers && window.CasperCheers.MAX_CHEER_LENGTH) || 60;
+    dom.cheerComposeCount.textContent = `${len} / ${maxLen}`;
+  }
+
+  function setCheerComposeError(msg) {
+    if (!dom.cheerComposeError) return;
+    if (msg) {
+      dom.cheerComposeError.textContent = msg;
+      dom.cheerComposeError.hidden = false;
+    } else {
+      dom.cheerComposeError.textContent = '';
+      dom.cheerComposeError.hidden = true;
+    }
+  }
+
+  function openCheerComposeModal() {
+    if (!dom.cheerComposeModal || !canComposeCurrentCheer()) return;
+    if (dom.cheerComposeInput) {
+      dom.cheerComposeInput.value = narrativeMeta.myCheer || '';
+    }
+    setCheerComposeError('');
+    syncCheerComposeCounter();
+    if (dom.btnCheerSubmitExternal) {
+      const hasUrl = Boolean(window.CasperCheers && String(window.CasperCheers.CHEERS_SUBMIT_URL || '').trim());
+      dom.btnCheerSubmitExternal.hidden = !hasUrl;
+    }
+    dom.cheerComposeModal.hidden = false;
+  }
+
+  function closeCheerComposeModal() {
+    if (dom.cheerComposeModal) dom.cheerComposeModal.hidden = true;
+    setCheerComposeError('');
   }
 
   function maybeShowIosInstallBanner() {
@@ -487,14 +800,13 @@
     demoActive = false;
 
     const nextMode = vault.mode === 'countdown' ? 'countdown' : 'pomodoro';
+    const remMins = window.TimerCore.clamp(Number(vault.remainingMinutes) || 1, 1, 720);
     timer.setMode(nextMode);
     if (nextMode === 'pomodoro') {
       timer.state.phase = 'focus';
-      timer.state.focusMinutes = window.TimerCore.clamp(Number(vault.remainingMinutes) || 1, 1, 720);
       timer.state.round = window.TimerCore.clamp(Number(vault.round) || 1, 1, 12);
-    } else {
-      timer.state.countdownMinutes = window.TimerCore.clamp(Number(vault.remainingMinutes) || 1, 1, 720);
     }
+    timer.setOverrideTargetMinutes(remMins);
     requestNotificationPermissionOnce();
     window.ChronoAudio.ensureContext();
     timer.start(Date.now());
@@ -504,6 +816,8 @@
     syncWakeLock(true);
     syncMusicWithTimer(true);
     syncResumeVaultBanner();
+    maybeShowFeatureHint('screenOn');
+    maybeShowReturningCheer();
     showToast(`남은 ${formatMinutesKo(vault.remainingMinutes)} 이어서 시작합니다`, 3000);
   }
 
@@ -524,6 +838,9 @@
     syncWakeLock(false);
     syncModeUI(drumDir);
     syncResumeVaultBanner();
+    if (nextMode === 'pomodoro' || nextMode === 'countdown') {
+      maybeShowFeatureHint('crown');
+    }
     return true;
   }
 
@@ -548,6 +865,8 @@
     persistActiveSession();
     if (timer.state.running) {
       scheduleCompletionTimer();
+      maybeShowFeatureHint('screenOn');
+      maybeShowReturningCheer();
     } else {
       clearCompletionTimer();
     }
@@ -589,6 +908,10 @@
 
   function isAnyModalOpen() {
     return Boolean(
+      (dom.onboardingOverlay && !dom.onboardingOverlay.hidden) ||
+      (dom.prologueOverlay && !dom.prologueOverlay.hidden) ||
+      (dom.epilogueOverlay && !dom.epilogueOverlay.hidden) ||
+      (dom.cheerComposeModal && !dom.cheerComposeModal.hidden) ||
       (dom.guideModal && !dom.guideModal.hidden) ||
       (dom.reflectionModal && !dom.reflectionModal.hidden) ||
       (dom.stopwatchReviewModal && !dom.stopwatchReviewModal.hidden) ||
@@ -600,7 +923,7 @@
   function applySteelTheme() {
     document.documentElement.setAttribute('data-theme', 'steel');
     if (dom.metaThemeColor) {
-      dom.metaThemeColor.setAttribute('content', '#E6E9EE');
+      dom.metaThemeColor.setAttribute('content', '#080B0F');
     }
   }
 
@@ -1075,6 +1398,7 @@
           return;
         }
         window.ChronoAudio.playCrownPull(true);
+        markFeatureHintSeen('crown');
         if (pos === 1) {
           showToast('용두 1단 인출 — ±1분 설정 (한 번 더 클릭 시 2단 ±5분)');
         } else {
@@ -1279,9 +1603,12 @@
   function syncTimerConfigUI() {
     const st = timer.state;
     const isAdjustableMode = st.mode === 'pomodoro' || st.mode === 'countdown';
-    const currentMins = st.mode === 'pomodoro'
-      ? (st.phase === 'break' ? st.breakMinutes : st.focusMinutes)
-      : st.countdownMinutes;
+    const hasOverride = st.overrideTargetMinutes !== null && (st.mode === 'countdown' || (st.mode === 'pomodoro' && st.phase === 'focus'));
+    const currentMins = hasOverride
+      ? st.overrideTargetMinutes
+      : (st.mode === 'pomodoro'
+        ? (st.phase === 'break' ? st.breakMinutes : st.focusMinutes)
+        : st.countdownMinutes);
     const formattedMins = formatMinutesKo(currentMins);
 
     if (dom.roundIndicator) {
@@ -1413,7 +1740,7 @@
 
       if (dom.deskAtelierLabel && dom.deskAtelierBarFill) {
         if (snap.allProjectsComplete) {
-          dom.deskAtelierLabel.textContent = '공방 4종 칼리버(NO.1·2·3·7) 조립 완료';
+          dom.deskAtelierLabel.textContent = '공방 10종 칼리버(NO.1~NO.10) 조립 완료';
           dom.deskAtelierBarFill.style.width = '100%';
         } else if (snap.readyPart) {
           dom.deskAtelierLabel.textContent = `${snap.activeProject.name} · ${snap.readyPart.code} 조립 가능!`;
@@ -1634,17 +1961,69 @@
         }
         const disabledAttr = (!c.unlocked || c.active) ? ' disabled' : '';
         const designTag = c.inDesign ? ' <span class="caliber-design-tag">설계 중</span>' : '';
+        const projInfo = snap.projects[c.id];
+        const assembledCnt = projInfo ? projInfo.assembledCount : 0;
+        const totalPartsCnt = projInfo ? projInfo.totalParts : 6;
+        const isExpanded = expandedCodexCaliberId === c.id;
+
+        let storyPanelHtml = '';
+        if (isExpanded && projInfo && Array.isArray(projInfo.parts)) {
+          const segmentsHtml = projInfo.parts.map(function (part, idx) {
+            const revealed = idx < assembledCnt;
+            const cls = revealed ? 'story-seg is-revealed' : 'story-seg is-veiled';
+            const ariaAttr = revealed ? '' : ' aria-hidden="true"';
+            return `<span class="${cls}"${ariaAttr}>${escapeHtml(part.story || '')}</span>`;
+          }).join(' ');
+          const completeBadge = assembledCnt >= totalPartsCnt
+            ? '<span class="caliber-story-complete-tag">서사 완성</span>'
+            : `<span>해금 ${assembledCnt}/${totalPartsCnt}</span>`;
+          const canCheer = Boolean(c.id === 'cal-a' && window.CasperCheers && window.CasperCheers.canComposeCheer(snap, Boolean(snap.devMode)));
+          const myCheerSlotHtml = (canCheer && narrativeMeta.myCheer)
+            ? '<div class="caliber-my-cheer"><div class="caliber-my-cheer-label">내가 남긴 한 줄</div><div class="caliber-my-cheer-text" data-my-cheer-slot="1"></div></div>'
+            : '';
+          const algebraActions = [];
+          if (c.id === 'cal-a' && (c.completed || narrativeMeta.epilogueSeen)) {
+            algebraActions.push('<button type="button" class="small-btn is-solid" data-action="open-epilogue">에필로그 다시 보기</button>');
+          }
+          if (canCheer) {
+            const cheerBtnLabel = narrativeMeta.myCheer ? '내가 남긴 한 줄 수정' : '다음 사람에게 한 줄 남기기';
+            algebraActions.push(`<button type="button" class="small-btn" data-action="open-cheer-compose">${cheerBtnLabel}</button>`);
+          }
+          const epilogueBtnHtml = algebraActions.length > 0
+            ? `<div class="caliber-story-actions">${algebraActions.join('')}</div>`
+            : '';
+          storyPanelHtml = [
+            '<div class="caliber-story-panel">',
+            '  <div class="caliber-story-head">',
+            `    <span>${escapeHtml(c.name)} 서사</span>`,
+            `    ${completeBadge}`,
+            '  </div>',
+            `  <div class="caliber-story-body">${segmentsHtml}</div>`,
+            myCheerSlotHtml,
+            epilogueBtnHtml,
+            '</div>'
+          ].join('');
+        }
+
         return [
-          `<div class="caliber-row${c.active ? ' is-equipped' : ''}${c.unlocked ? ' is-unlocked' : ' is-locked'}${c.playable ? ' is-playable' : ' is-concept'}">`,
-          `  <span class="caliber-letter-badge${c.active ? ' is-active' : (c.playable ? ' is-playable' : '')}" aria-hidden="true">${escapeHtml(c.num || c.letter)}</span>`,
-          '  <div class="caliber-info">',
-          `    <div class="caliber-name">${escapeHtml(c.name)} <span class="caliber-ko">${escapeHtml(c.korean)}</span>${designTag}</div>`,
-          `    <div class="caliber-sub">${escapeHtml(c.subtitle)}</div>`,
+          '<div class="caliber-item">',
+          `  <div class="caliber-row${c.active ? ' is-equipped' : ''}${c.unlocked ? ' is-unlocked' : ' is-locked'}${c.playable ? ' is-playable' : ' is-concept'}" data-action="toggle-codex-story" data-caliber="${escapeHtml(c.id)}" aria-expanded="${String(isExpanded)}">`,
+          `    <span class="caliber-letter-badge${c.active ? ' is-active' : (c.playable ? ' is-playable' : '')}" aria-hidden="true">${escapeHtml(c.num || c.letter)}</span>`,
+          '    <div class="caliber-info">',
+          `      <div class="caliber-name">${escapeHtml(c.name)} <span class="caliber-ko">${escapeHtml(c.korean)}</span>${designTag}</div>`,
+          `      <div class="caliber-sub">${escapeHtml(c.subtitle)}</div>`,
+          '    </div>',
+          `    <button type="button" class="small-btn${c.active ? ' is-solid' : ''}" data-action="select-caliber" data-caliber="${escapeHtml(c.id)}"${disabledAttr}>${escapeHtml(stateText)}</button>`,
           '  </div>',
-          `  <button type="button" class="small-btn${c.active ? ' is-solid' : ''}" data-action="select-caliber" data-caliber="${escapeHtml(c.id)}"${disabledAttr}>${escapeHtml(stateText)}</button>`,
+          storyPanelHtml,
           '</div>'
         ].join('');
       }).join('');
+      // Inject user's saved one-line cheer strictly via textContent (never innerHTML)
+      const myCheerSlot = dom.atelierCaliberList.querySelector('[data-my-cheer-slot="1"]');
+      if (myCheerSlot) {
+        myCheerSlot.textContent = narrativeMeta.myCheer || '';
+      }
     }
     syncMotivationLine(null, snap);
   }
@@ -1690,6 +2069,19 @@
       }
     }
     if (dom.reflectionInput) dom.reflectionInput.value = '';
+    if (dom.reflectionCheerBox && dom.reflectionCheerText) {
+      if (o.isPartial) {
+        const cheerText = maybeConsumeDailyCheer();
+        if (cheerText) {
+          dom.reflectionCheerText.textContent = cheerText;
+          dom.reflectionCheerBox.hidden = false;
+        } else {
+          dom.reflectionCheerBox.hidden = true;
+        }
+      } else {
+        dom.reflectionCheerBox.hidden = true;
+      }
+    }
     if (dom.reflectionModal) dom.reflectionModal.hidden = false;
     // B-6: Do NOT auto-focus on touch/mobile devices so keyboard never hides atelier reward text
     const isDesktopFinePointer = Boolean(
@@ -1706,6 +2098,12 @@
     activeReflectionLogId = null;
     activeReflectionCanStartBreak = false;
     if (dom.reflectionModal) dom.reflectionModal.hidden = true;
+    if (pendingPrologueAfterReflection) {
+      pendingPrologueAfterReflection = false;
+      openPrologueModal();
+    } else if (!deckFlipped) {
+      maybeShowFeatureHint('deck');
+    }
   }
 
   function saveReflectionMemoIfAny() {
@@ -1825,6 +2223,9 @@
     if (dom.backControlDeck) {
       dom.backControlDeck.setAttribute('aria-hidden', String(!deckFlipped));
     }
+    if (deckFlipped) {
+      markFeatureHintSeen('deck');
+    }
     if (deckFlipped && satellite && satellite.isCrownPulled()) {
       satellite.setCrownPosition(0, true);
       syncLiveStatusStrip();
@@ -1880,7 +2281,7 @@
         : (snapshot.phase === 'break' ? '휴식' : '집중');
       document.title = `[${snapshot.digitalText}] ${phaseShort} · ${watchTitle}`;
     } else {
-      document.title = `CASPER — ${watchTitle} 기계식 공부 타이머`;
+      document.title = `CASPER — 시간을 보관하는 공방`;
     }
   }
 
@@ -2129,9 +2530,106 @@
         order.forEach(function (cid) { resetParts[cid] = []; });
         atelierState.assembledParts = resetParts;
         atelierState = window.ChronoStorage.saveAtelier(atelierState);
+        if (dom.atelierStoryFeedback) dom.atelierStoryFeedback.hidden = true;
         window.ChronoAudio.playCrownRatchet();
         renderAtelier();
         showToast('[DEV] 전체 10종 칼리버 부품 조립 상태를 초기화했습니다');
+        break;
+      }
+
+      case 'dev-reset-all': {
+        if (!atelierState.devMode) break;
+        if (!window.confirm('[DEV] 누적 시간(lifetimeMinutes), 모든 기록, 조립 부품을 0으로 완전히 초기화할까요?')) break;
+        if (window.ChronoStorage && typeof window.ChronoStorage.devResetAllProgress === 'function') {
+          window.ChronoStorage.devResetAllProgress(Boolean(atelierState.devMode));
+          atelierState = window.ChronoStorage.loadAtelier();
+          timer.reset({ resetRound: true });
+          clearCompletionTimer();
+          if (dom.atelierStoryFeedback) dom.atelierStoryFeedback.hidden = true;
+          syncModeUI();
+          renderLogsAndStats();
+          syncResumeVaultBanner();
+          window.ChronoAudio.playCrownRatchet();
+          showToast('[DEV] 누적 시간·기록·부품을 모두 0으로 초기화했습니다', 3200);
+        }
+        break;
+      }
+
+      case 'dev-preview-epilogue':
+        if (!atelierState.devMode) break;
+        openEpilogueOverlay();
+        break;
+
+      case 'onboarding-start-5m':
+        startOnboardingFiveMinutes();
+        break;
+
+      case 'onboarding-dismiss':
+        closeOnboardingOverlay();
+        break;
+
+      case 'open-prologue':
+        openPrologueModal();
+        break;
+
+      case 'prologue-next':
+        advancePrologueCard();
+        break;
+
+      case 'prologue-skip':
+        closePrologueModal();
+        break;
+
+      case 'open-epilogue':
+        openEpilogueOverlay();
+        break;
+
+      case 'close-epilogue':
+        closeEpilogueOverlay();
+        break;
+
+      case 'dismiss-feature-hint':
+        dismissFeatureHint();
+        break;
+
+      case 'dismiss-cheer-banner':
+        dismissCheerBanner();
+        break;
+
+      case 'open-cheer-compose':
+        openCheerComposeModal();
+        break;
+
+      case 'close-cheer-compose':
+        closeCheerComposeModal();
+        break;
+
+      case 'submit-cheer-external': {
+        if (!window.CasperCheers || !dom.cheerComposeInput) break;
+        const check = window.CasperCheers.validateCheerText(dom.cheerComposeInput.value);
+        if (!check.ok) {
+          setCheerComposeError(check.message);
+          break;
+        }
+        const url = window.CasperCheers.buildSubmitUrl(check.text);
+        if (!url) {
+          setCheerComposeError('외부 제출 링크가 아직 설정되지 않았습니다');
+          break;
+        }
+        narrativeMeta.myCheer = check.text;
+        saveNarrativeState();
+        renderAtelier();
+        closeCheerComposeModal();
+        window.open(url, '_blank', 'noopener,noreferrer');
+        showToast('한 줄 응원을 보관하고 제출 양식을 새 탭에서 열었습니다', 3400);
+        break;
+      }
+
+      case 'toggle-codex-story': {
+        const calId = target.getAttribute('data-caliber');
+        if (!calId) break;
+        expandedCodexCaliberId = (expandedCodexCaliberId === calId) ? null : calId;
+        renderAtelier();
         break;
       }
 
@@ -2144,15 +2642,29 @@
           break;
         }
         atelierState = window.ChronoStorage.saveAtelier(res.state);
+        if (dom.atelierStoryFeedback && res.assembledPart && res.assembledPart.story) {
+          dom.atelierStoryFeedback.innerHTML = [
+            `<div class="atelier-story-feedback-meta">${escapeHtml(res.assembledPart.code)} ${escapeHtml(res.assembledPart.name)} · 조립 완료</div>`,
+            `<div class="atelier-story-feedback-quote">“${escapeHtml(res.assembledPart.story)}”</div>`
+          ].join('');
+          dom.atelierStoryFeedback.hidden = false;
+        }
         if (res.completedCaliber && res.completedCaliberId) {
           atelierState.activeWatch = res.completedCaliberId;
           atelierState = window.ChronoStorage.saveAtelier(atelierState);
           window.ChronoAudio.strikeClassicGong('low', 0);
           window.ChronoAudio.strikeClassicGong('high', 0.24);
           showToast(`${res.completedCaliberName} 최종 완성! 앞면 시계에 새 칼리버가 장착되었습니다`, 4200);
+          if (res.completedCaliberId === 'cal-a') {
+            openEpilogueOverlay();
+          } else {
+            const cheerText = maybeConsumeDailyCheer();
+            if (cheerText) showCheerBanner(cheerText);
+          }
         } else {
           window.ChronoAudio.playCrownPull(true);
-          showToast(`${res.assembledPart.code} ${res.assembledPart.name} 조립 완료!`, 3000);
+          const storyPreview = res.assembledPart.story ? ` — ${res.assembledPart.story}` : '';
+          showToast(`${res.assembledPart.code} ${res.assembledPart.name} 조립 완료!${storyPreview}`, 3800);
         }
         renderAtelier();
         break;
@@ -2530,6 +3042,40 @@
     });
   }
 
+  if (dom.chkCheersEnabled) {
+    dom.chkCheersEnabled.addEventListener('change', function () {
+      prefs.cheersEnabled = dom.chkCheersEnabled.checked;
+      window.ChronoStorage.savePrefs(prefs);
+      if (!prefs.cheersEnabled) {
+        dismissCheerBanner();
+      }
+    });
+  }
+
+  if (dom.cheerComposeInput) {
+    dom.cheerComposeInput.addEventListener('input', function () {
+      syncCheerComposeCounter();
+      setCheerComposeError('');
+    });
+  }
+
+  if (dom.cheerComposeForm) {
+    dom.cheerComposeForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!window.CasperCheers || !dom.cheerComposeInput) return;
+      const check = window.CasperCheers.validateCheerText(dom.cheerComposeInput.value);
+      if (!check.ok) {
+        setCheerComposeError(check.message);
+        return;
+      }
+      narrativeMeta.myCheer = check.text;
+      saveNarrativeState();
+      renderAtelier();
+      closeCheerComposeModal();
+      showToast('내가 남긴 한 줄을 공방에 보관했습니다', 3000);
+    });
+  }
+
   if (dom.chkMannerMode) {
     dom.chkMannerMode.addEventListener('change', function () {
       applyMannerMode(dom.chkMannerMode.checked, true);
@@ -2711,7 +3257,15 @@
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
     if (e.key === 'Escape') {
-      if (dom.quickTimeSheet && !dom.quickTimeSheet.hidden) {
+      if (dom.cheerComposeModal && !dom.cheerComposeModal.hidden) {
+        closeCheerComposeModal();
+      } else if (dom.epilogueOverlay && !dom.epilogueOverlay.hidden) {
+        closeEpilogueOverlay();
+      } else if (dom.prologueOverlay && !dom.prologueOverlay.hidden) {
+        closePrologueModal();
+      } else if (dom.onboardingOverlay && !dom.onboardingOverlay.hidden) {
+        closeOnboardingOverlay();
+      } else if (dom.quickTimeSheet && !dom.quickTimeSheet.hidden) {
         closeQuickTimeSheet();
       } else if (dom.subjectSheet && !dom.subjectSheet.hidden) {
         closeSubjectSheet();
@@ -2849,6 +3403,7 @@
   applyMannerMode(prefs.mannerMode, false);
   applyAlarmType(prefs.alarmType, false);
   if (dom.chkHourlyChime) dom.chkHourlyChime.checked = Boolean(prefs.hourlyChime);
+  if (dom.chkCheersEnabled) dom.chkCheersEnabled.checked = prefs.cheersEnabled !== false;
   setMusicAutoSync(prefs.musicAutoSync !== false);
   renderMusicPresets();
   syncMusicControlsUI();
@@ -2884,10 +3439,17 @@
   renderLogsAndStats();
   syncResumeVaultBanner();
   maybeShowIosInstallBanner();
+  loadCheersPool();
+  if (isBrandNewUserOnBoot) {
+    openOnboardingOverlay();
+  }
   requestAnimationFrame(renderFrame);
 
   // Safe PWA Service Worker registration (http/https only; skipped safely on file://)
+  // Never force-reloads when a new SW installs so running timers are never interrupted.
   if ('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')) {
-    navigator.serviceWorker.register('sw.js').catch(function () {});
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      swRegistration = reg;
+    }).catch(function () {});
   }
 })();

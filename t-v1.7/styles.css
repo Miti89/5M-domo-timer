@@ -4960,3 +4960,420 @@ body.is-standby .toast-banner {
   background: rgba(120, 132, 148, 0.14);
   vertical-align: middle;
 }
+
+/* =========================================================================
+   CASPER v1.7 Phase 3 — Onboarding, Prologue, Part Stories, Epilogue, Hints
+   ========================================================================= */
+.small-btn.is-dev-danger {
+  border-color: rgba(186, 56, 46, 0.45);
+  color: #a12f26;
+}
+
+.gentle-banner.is-hint-banner {
+  background: rgba(247, 249, 252, 0.92);
+  border-color: rgba(96, 118, 146, 0.34);
+}
+
+/* Atelier Part Assembly Story Feedback */
+.atelier-story-feedback {
+  margin-top: 10px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: rgba(24, 30, 40, 0.055);
+  border-left: 3px solid var(--accent-focus, #C84B31);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-primary, #1B2028);
+}
+
+.atelier-story-feedback[hidden] {
+  display: none;
+}
+
+.atelier-story-feedback-meta {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted, #606a78);
+  margin-bottom: 4px;
+}
+
+.atelier-story-feedback-quote {
+  font-weight: 600;
+  color: var(--ink-primary, #1B2028);
+}
+
+/* Codex Caliber Entry + Expandable Narrative */
+.caliber-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.caliber-item .caliber-row {
+  cursor: pointer;
+}
+
+.caliber-story-panel {
+  margin: -2px 0 8px;
+  padding: 11px 13px 12px;
+  border-radius: 0 0 10px 10px;
+  background: rgba(24, 30, 40, 0.04);
+  border: 1px solid rgba(110, 120, 134, 0.18);
+  border-top: none;
+  font-size: 12.5px;
+  line-height: 1.72;
+  color: var(--ink-primary, #1B2028);
+}
+
+.caliber-story-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted, #606a78);
+}
+
+.caliber-story-complete-tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(42, 118, 86, 0.14);
+  color: #216347;
+  font-weight: 700;
+}
+
+.caliber-story-body {
+  word-break: keep-all;
+}
+
+.story-seg {
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+.story-seg.is-revealed {
+  color: var(--ink-primary, #1B2028);
+}
+
+.story-seg.is-veiled {
+  color: var(--ink-muted, #606a78);
+  filter: blur(4.5px);
+  opacity: 0.36;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.caliber-story-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Onboarding & Prologue Narrative Overlays */
+.narrative-backdrop {
+  background: rgba(16, 20, 27, 0.68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1200;
+}
+
+.narrative-card {
+  width: min(92vw, 400px);
+  border-radius: 18px;
+  padding: 28px 24px 24px;
+  background: linear-gradient(180deg, #F5F7FA 0%, #E7ECF2 100%);
+  border: 1.5px solid rgba(90, 102, 118, 0.35);
+  box-shadow: 0 24px 56px rgba(10, 14, 22, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  color: var(--ink-primary, #1B2028);
+}
+
+.narrative-eyebrow {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--ink-muted, #606a78);
+}
+
+.is-onboarding-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 36px 26px 26px;
+}
+
+.onboarding-headline {
+  margin: 4px 0 6px;
+  font-size: 20px;
+  line-height: 1.5;
+  font-weight: 800;
+  word-break: keep-all;
+  color: var(--ink-primary, #1B2028);
+}
+
+.onboarding-start-btn {
+  width: 100%;
+  min-height: 52px;
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.onboarding-browse-btn {
+  font-size: 12.5px;
+  color: var(--ink-muted, #606a78);
+  padding: 4px 10px;
+}
+
+/* Prologue 3-Card Modal */
+.is-prologue-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 270px;
+}
+
+.prologue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.is-prologue-skip {
+  font-size: 12px;
+  color: var(--ink-muted, #606a78);
+}
+
+.prologue-stage {
+  flex: 1 1 auto;
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 18px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(110, 122, 138, 0.18);
+  cursor: pointer;
+}
+
+.prologue-text {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.72;
+  font-weight: 600;
+  word-break: keep-all;
+  white-space: pre-line;
+  color: var(--ink-primary, #1B2028);
+}
+
+.prologue-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.prologue-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prologue-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(90, 102, 118, 0.28);
+  transition: width 0.2s ease, background 0.2s ease;
+}
+
+.prologue-dot.is-active {
+  width: 18px;
+  background: var(--ink-primary, #1B2028);
+}
+
+/* Epilogue Fullscreen Overlay (Phase 3-4) */
+.epilogue-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 22px;
+  background: radial-gradient(circle at 50% 35%, #1E2530 0%, #0E1218 78%);
+  color: #E7ECF2;
+  overflow-y: auto;
+}
+
+.epilogue-overlay[hidden] {
+  display: none;
+}
+
+.epilogue-inner {
+  width: min(100%, 560px);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  text-align: left;
+}
+
+.epilogue-eyebrow {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: rgba(214, 190, 138, 0.86);
+}
+
+.epilogue-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.epilogue-para {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.82;
+  word-break: keep-all;
+  color: rgba(235, 240, 246, 0.88);
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.epilogue-overlay.is-animating .epilogue-para {
+  animation: epilogueFadeUp 1.05s ease forwards;
+  animation-delay: var(--ep-delay, 0s);
+}
+
+.epilogue-para.epilogue-final-line {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(214, 190, 138, 0.28);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.7;
+  color: #F6E2B3;
+}
+
+.epilogue-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0;
+}
+
+.epilogue-overlay.is-animating .epilogue-actions {
+  animation: epilogueFadeUp 0.9s ease forwards;
+  animation-delay: var(--ep-delay, 4.6s);
+}
+
+.epilogue-close-btn {
+  min-width: 120px;
+}
+
+@keyframes epilogueFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================================
+   CASPER v1.7 — Finisher One-Line Cheers UI
+   ========================================================================= */
+.gentle-banner.is-cheer-banner {
+  background: rgba(250, 248, 243, 0.94);
+  border-color: rgba(176, 142, 74, 0.34);
+}
+
+.cheer-banner-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cheer-eyebrow {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #8A6B2F;
+  margin-bottom: 3px;
+}
+
+.cheer-quote {
+  font-size: 12.5px;
+  line-height: 1.55;
+  font-weight: 600;
+  word-break: keep-all;
+  color: var(--ink-primary, #1B2028);
+}
+
+.reflection-cheer-box {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(176, 142, 74, 0.08);
+  border: 1px solid rgba(176, 142, 74, 0.22);
+}
+
+.reflection-cheer-box[hidden] {
+  display: none;
+}
+
+.caliber-my-cheer {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: rgba(176, 142, 74, 0.08);
+  border-left: 2.5px solid #B08E4A;
+}
+
+.caliber-my-cheer-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #8A6B2F;
+  margin-bottom: 3px;
+}
+
+.caliber-my-cheer-text {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-primary, #1B2028);
+  word-break: keep-all;
+}
+
+.caliber-story-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cheer-compose-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -4px 0 8px;
+  font-size: 11.5px;
+}
+
+.cheer-compose-error {
+  color: #B43728;
+  font-weight: 700;
+}
+
+.cheer-compose-count {
+  margin-left: auto;
+  font-family: var(--font-mono, monospace);
+  color: var(--ink-muted, #606a78);
+}

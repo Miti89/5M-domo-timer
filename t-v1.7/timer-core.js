@@ -106,6 +106,7 @@
       focusMinutes: clamp(Number(opts.focusMinutes) || 25, 1, 720),
       breakMinutes: clamp(Number(opts.breakMinutes) || 5, 1, 180),
       countdownMinutes: clamp(Number(opts.countdownMinutes) || 25, 1, 720),
+      overrideTargetMinutes: null,   // One-shot session target (resume vault / 5m onboarding)
       round: 1,                      // 1..12 displayed on satellite hour disc in pomodoro
       autoStartBreak: false,
       completedCount: 0
@@ -113,13 +114,26 @@
 
     function getTargetMs() {
       if (state.mode === 'pomodoro') {
-        const mins = state.phase === 'break' ? state.breakMinutes : state.focusMinutes;
+        if (state.phase === 'break') {
+          return state.breakMinutes * 60 * 1000;
+        }
+        const mins = state.overrideTargetMinutes !== null ? state.overrideTargetMinutes : state.focusMinutes;
         return mins * 60 * 1000;
       }
       if (state.mode === 'countdown') {
-        return state.countdownMinutes * 60 * 1000;
+        const mins = state.overrideTargetMinutes !== null ? state.overrideTargetMinutes : state.countdownMinutes;
+        return mins * 60 * 1000;
       }
       return 0;
+    }
+
+    function setOverrideTargetMinutes(mins) {
+      if (mins === null || mins === undefined || mins === '') {
+        state.overrideTargetMinutes = null;
+        return null;
+      }
+      state.overrideTargetMinutes = clamp(Math.round(Number(mins) || 1), 1, 720);
+      return state.overrideTargetMinutes;
     }
 
     function getElapsedMs(nowMs) {
@@ -156,6 +170,7 @@
       state.running = false;
       state.startedAtMs = null;
       state.accumulatedMs = 0;
+      state.overrideTargetMinutes = null;
       if (r.resetRound) {
         state.round = 1;
         state.phase = 'focus';
@@ -168,6 +183,7 @@
       state.running = false;
       state.startedAtMs = null;
       state.accumulatedMs = 0;
+      state.overrideTargetMinutes = null;
       if (nextMode === 'pomodoro') {
         state.phase = 'focus';
       }
@@ -176,6 +192,7 @@
     function setPomodoroPreset(focusMin, breakMin) {
       state.focusMinutes = clamp(Number(focusMin) || 25, 1, 720);
       state.breakMinutes = clamp(Number(breakMin) || 5, 1, 180);
+      state.overrideTargetMinutes = null;
       if (state.mode === 'pomodoro' && !state.running) {
         state.accumulatedMs = 0;
       }
@@ -193,6 +210,7 @@
           if (next === state.focusMinutes) return false;
           state.focusMinutes = next;
         }
+        state.overrideTargetMinutes = null;
         state.accumulatedMs = 0;
         return true;
       }
@@ -200,6 +218,7 @@
         const next = clamp(state.countdownMinutes + deltaMin, 1, 720);
         if (next === state.countdownMinutes) return false;
         state.countdownMinutes = next;
+        state.overrideTargetMinutes = null;
         state.accumulatedMs = 0;
         return true;
       }
@@ -241,6 +260,7 @@
       if (nextTotal === cur) return false;
 
       state[key] = nextTotal;
+      state.overrideTargetMinutes = null;
       state.accumulatedMs = 0;
       return true;
     }
@@ -264,6 +284,7 @@
         state.running = false;
         state.startedAtMs = null;
         state.accumulatedMs = 0;
+        state.overrideTargetMinutes = null;
 
         if (state.mode === 'pomodoro') {
           if (state.phase === 'focus') {
@@ -481,6 +502,7 @@
         focusMinutes: state.focusMinutes,
         breakMinutes: state.breakMinutes,
         countdownMinutes: state.countdownMinutes,
+        overrideTargetMinutes: state.overrideTargetMinutes !== null ? state.overrideTargetMinutes : null,
         round: state.round,
         autoStartBreak: Boolean(state.autoStartBreak),
         savedAtMs: now
@@ -501,6 +523,9 @@
       state.focusMinutes = clamp(Number(saved.focusMinutes) || state.focusMinutes, 1, 720);
       state.breakMinutes = clamp(Number(saved.breakMinutes) || state.breakMinutes, 1, 180);
       state.countdownMinutes = clamp(Number(saved.countdownMinutes) || state.countdownMinutes, 1, 720);
+      state.overrideTargetMinutes = (typeof saved.overrideTargetMinutes === 'number' && Number.isFinite(saved.overrideTargetMinutes) && saved.overrideTargetMinutes > 0)
+        ? clamp(Math.round(saved.overrideTargetMinutes), 1, 720)
+        : null;
       state.round = clamp(Math.round(Number(saved.round) || 1), 1, 12);
       state.autoStartBreak = Boolean(saved.autoStartBreak);
       state.accumulatedMs = Math.max(0, Number(saved.accumulatedMs) || 0);
@@ -571,6 +596,7 @@
       setPomodoroPreset,
       adjustMinutes,
       adjustHours,
+      setOverrideTargetMinutes,
       getTargetMs,
       getElapsedMs,
       tick,

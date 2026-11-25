@@ -17,6 +17,8 @@
   const ACTIVE_SESSION_KEY = 'no1_pro_active_session_v1';
   const RESUME_VAULT_KEY = 'no1_pro_resume_vault_v1';
   const SAFETY_META_KEY = 'no1_pro_safety_v1';
+  // Phase 3 (v1.7) onboarding, narrative & one-time hints persistence key
+  const NARRATIVE_META_KEY = 'no1_pro_narrative_v1';
 
   const MAX_INDIVIDUAL_LOGS = 900;
   const LOG_COMPACT_THRESHOLD = 1000;
@@ -33,6 +35,7 @@
     focusMinutes: 25,
     breakMinutes: 5,
     countdownMinutes: 25,
+    cheersEnabled: true,
     musicAutoSync: true,
     musicVolume: 75,
     musicBookmarks: []
@@ -489,9 +492,124 @@
     } catch (e) {}
   }
 
+  // Phase 3: Onboarding, Prologue, Epilogue & One-Time Feature Hints (+ Cheers)
+  function loadNarrativeMeta() {
+    const def = {
+      onboardingSeen: false,
+      prologueSeen: false,
+      epilogueSeen: false,
+      hintsSeen: { deck: false, crown: false, screenOn: false },
+      myCheer: '',
+      cheerState: { lastShownDateKey: '', lastShownId: '', seenIds: [] }
+    };
+    try {
+      const store = getStore();
+      const raw = store ? store.getItem(NARRATIVE_META_KEY) : null;
+      if (!raw) return def;
+      const parsed = JSON.parse(raw);
+      const rawHints = (parsed && parsed.hintsSeen && typeof parsed.hintsSeen === 'object') ? parsed.hintsSeen : {};
+      const rawCheerState = (parsed && parsed.cheerState && typeof parsed.cheerState === 'object') ? parsed.cheerState : {};
+      return {
+        onboardingSeen: Boolean(parsed.onboardingSeen),
+        prologueSeen: Boolean(parsed.prologueSeen),
+        epilogueSeen: Boolean(parsed.epilogueSeen),
+        hintsSeen: {
+          deck: Boolean(rawHints.deck),
+          crown: Boolean(rawHints.crown),
+          screenOn: Boolean(rawHints.screenOn)
+        },
+        myCheer: typeof parsed.myCheer === 'string' ? parsed.myCheer.slice(0, 60) : '',
+        cheerState: {
+          lastShownDateKey: String(rawCheerState.lastShownDateKey || ''),
+          lastShownId: String(rawCheerState.lastShownId || ''),
+          seenIds: Array.isArray(rawCheerState.seenIds) ? rawCheerState.seenIds.map(String) : []
+        }
+      };
+    } catch (e) {
+      return def;
+    }
+  }
+
+  function saveNarrativeMeta(meta) {
+    try {
+      const store = getStore();
+      if (store) store.setItem(NARRATIVE_META_KEY, JSON.stringify(meta));
+    } catch (e) {}
+  }
+
+  /**
+   * Determines whether the current visitor is a brand-new user who should see onboarding:
+   * - onboardingSeen flag is false
+   * - no saved logs
+   * - lifetimeMinutes is 0 (read-only check without mutating LIFETIME_KEY)
+   * - no saved atelier state key (ATELIER_KEY)
+   */
+  function isNewUser() {
+    const narrative = loadNarrativeMeta();
+    if (narrative.onboardingSeen) return false;
+    try {
+      const store = getStore();
+      if (!store) return false;
+      const rawAtelier = store.getItem(ATELIER_KEY);
+      if (rawAtelier !== null && rawAtelier !== undefined && rawAtelier !== '') {
+        return false;
+      }
+      const logs = loadLogs();
+      if (logs.length > 0) return false;
+      const rawLifetime = store.getItem(LIFETIME_KEY);
+      if (rawLifetime !== null && rawLifetime !== undefined && rawLifetime !== '') {
+        const parsed = JSON.parse(rawLifetime);
+        const mins = typeof parsed === 'number'
+          ? parsed
+          : (parsed && typeof parsed.minutes === 'number' ? parsed.minutes : 0);
+        if (mins > 0) return false;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Dev-mode-only complete progress reset (the sole exception allowed to zero lifetimeMinutes).
+   * Strictly refuses to run unless isDevMode === true.
+   */
+  function devResetAllProgress(isDevMode) {
+    if (isDevMode !== true) return false;
+    try {
+      const store = getStore();
+      if (!store) return false;
+      store.setItem(LOGS_KEY, JSON.stringify([]));
+      store.setItem(LIFETIME_KEY, JSON.stringify({ minutes: 0, updatedAt: Date.now(), devReset: true }));
+      store.removeItem(ACTIVE_SESSION_KEY);
+      store.removeItem(RESUME_VAULT_KEY);
+
+      const curAtelier = loadAtelier();
+      const emptyParts = {};
+      const order = (global.CasperAtelier && Array.isArray(global.CasperAtelier.BUILD_ORDER))
+        ? global.CasperAtelier.BUILD_ORDER
+        : ['cal-b', 'cal-d', 'cal-c', 'cal-e', 'cal-f', 'cal-g', 'cal-h', 'cal-i', 'cal-j', 'cal-a'];
+      order.forEach(function (cid) { emptyParts[cid] = []; });
+      saveAtelier(Object.assign({}, curAtelier, {
+        activeWatch: 'cal-b',
+        devMode: true,
+        assembledParts: emptyParts
+      }));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function mergeAssembledPartsNonDecreasing(currentAtelier, importedAtelier) {
-    const cur = (currentAtelier && currentAtelier.assembledParts) || {};
-    const imp = (importedAtelier && importedAtelier.assembledParts) || {};
+    const cleanCur = (global.CasperAtelier && typeof global.CasperAtelier.sanitizeAtelierState === 'function')
+      ? global.CasperAtelier.sanitizeAtelierState(currentAtelier)
+      : (currentAtelier || {});
+    const cleanImp = (global.CasperAtelier && typeof global.CasperAtelier.sanitizeAtelierState === 'function')
+      ? global.CasperAtelier.sanitizeAtelierState(importedAtelier)
+      : (importedAtelier || {});
+    const cur = (cleanCur && cleanCur.assembledParts) || {};
+    const imp = (cleanImp && cleanImp.assembledParts) || {};
     const order = (global.CasperAtelier && Array.isArray(global.CasperAtelier.BUILD_ORDER))
       ? global.CasperAtelier.BUILD_ORDER
       : ['cal-b', 'cal-d', 'cal-c', 'cal-e', 'cal-f', 'cal-g', 'cal-h', 'cal-i', 'cal-j', 'cal-a'];
@@ -501,15 +619,17 @@
       const b = Array.isArray(imp[cid]) ? imp[cid] : [];
       merged[cid] = b.length > a.length ? b.slice() : a.slice();
     });
-    return Object.assign({}, currentAtelier, importedAtelier, { assembledParts: merged });
+    return Object.assign({}, cleanCur, cleanImp, { assembledParts: merged });
   }
 
   function exportBackupJson() {
+    const narrative = loadNarrativeMeta();
     return JSON.stringify({
       app: 'CASPER',
       schema: 3,
       exportedAt: new Date().toISOString(),
       lifetimeMinutes: getLifetimeMinutes(),
+      myCheer: narrative.myCheer || '',
       prefs: loadPrefs(),
       atelier: loadAtelier(),
       logs: loadLogs()
@@ -559,6 +679,13 @@
       const curAtelier = loadAtelier();
       saveAtelier(mergeAssembledPartsNonDecreasing(curAtelier, parsed.atelier));
     }
+    if (typeof parsed.myCheer === 'string' && parsed.myCheer.trim()) {
+      const narrative = loadNarrativeMeta();
+      if (!narrative.myCheer) {
+        narrative.myCheer = parsed.myCheer.trim().slice(0, 60);
+        saveNarrativeMeta(narrative);
+      }
+    }
     return { total: merged.length, added, lifetimeMinutes: nextLifetime };
   }
 
@@ -585,6 +712,10 @@
     clearResumeVault,
     loadSafetyMeta,
     saveSafetyMeta,
+    loadNarrativeMeta,
+    saveNarrativeMeta,
+    isNewUser,
+    devResetAllProgress,
     getStatsSummary,
     exportBackupJson,
     importBackupJson

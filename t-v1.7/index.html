@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#E6E9ED" id="metaThemeColor" />
-  <meta name="description" content="CASPER — NO.1~NO.10 수학적 기계식 시계 컬렉션 기반 아날로그 몰입형 공부 타이머 (NO.1 ALGEBRA, NO.2 BINARY, NO.3 CYCLOID, NO.5 ELLIPSE, NO.7 GEOMETRY)" />
-  <title>CASPER — NO.2 BINARY 기계식 공부 타이머</title>
+  <meta name="theme-color" content="#080B0F" id="metaThemeColor" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CASPER" />
+  <meta name="description" content="단 5분의 집중도 보물로 보관하는 기계식 시계 타이머 — CASPER NO.1~NO.10" />
+  <title>CASPER — 시간을 보관하는 공방</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23C8CED6' stroke='%234A5058' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='24' fill='%2325282D'/%3E%3Cpath d='M32 32 L49 18 A22 22 0 0 1 49 46 Z' fill='%23D94336' opacity='0.88'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%23E5C26B'/%3E%3C/svg%3E" />
   <link rel="manifest" href="manifest.json?v=1.7.0" />
   <link rel="stylesheet" href="styles.css?v=1.7.0" />
@@ -169,6 +173,25 @@
                 </div>
               </div>
 
+              <!-- 1회성 기능 안내 힌트 배너 (Phase 3-5) -->
+              <div class="gentle-banner is-hint-banner" id="featureHintBanner" hidden role="status" aria-live="polite">
+                <div class="gentle-banner-copy" id="featureHintText"></div>
+                <div class="gentle-banner-actions">
+                  <button type="button" class="small-btn" data-action="dismiss-feature-hint">알겠어요</button>
+                </div>
+              </div>
+
+              <!-- 완주자의 한 줄 응원 배너 -->
+              <div class="gentle-banner is-cheer-banner" id="cheerNoticeBanner" hidden role="status" aria-live="polite">
+                <div class="cheer-banner-body">
+                  <div class="cheer-eyebrow">먼저 완주한 누군가의 한 줄</div>
+                  <div class="cheer-quote" id="cheerNoticeText"></div>
+                </div>
+                <div class="gentle-banner-actions">
+                  <button type="button" class="text-link-btn is-compact-link" data-action="dismiss-cheer-banner">닫기</button>
+                </div>
+              </div>
+
               <!-- 데스크톱(≥1024px) 전용 오늘의 기록·공방 요약 카드 -->
               <div class="desktop-summary-card" id="desktopSummaryCard" aria-label="오늘의 공부 및 공방 요약">
                 <div class="desktop-summary-grid">
@@ -275,6 +298,19 @@
               <input type="text" id="newSubjectInput" class="text-input" maxlength="16" placeholder="새 과목 추가 (예: 미적분, 토익)" aria-label="새 과목명 입력" />
               <button type="submit" class="small-btn">추가</button>
             </form>
+          </div>
+
+          <div class="card-block">
+            <div class="card-head">
+              <h2 class="card-title">공방 응원 메시지</h2>
+              <span class="card-sub">하루 최대 1회</span>
+            </div>
+            <div class="option-row">
+              <label class="check-label">
+                <input type="checkbox" id="chkCheersEnabled" checked />
+                <span>응원 메시지 보기</span>
+              </label>
+            </div>
           </div>
         </section>
 
@@ -435,6 +471,8 @@
               <button type="button" class="small-btn" data-action="dev-toggle-demo">600× 시연 토글</button>
               <button type="button" class="small-btn" data-action="dev-add-session">+60분 테스트 기록</button>
               <button type="button" class="small-btn" data-action="dev-reset-parts">부품 조립 초기화</button>
+              <button type="button" class="small-btn" data-action="dev-preview-epilogue">에필로그 미리보기</button>
+              <button type="button" class="small-btn is-dev-danger" data-action="dev-reset-all">누적 시간·기록 전체 초기화</button>
             </div>
           </div>
 
@@ -465,6 +503,8 @@
               <button type="button" class="ctrl-btn atelier-assemble-btn" id="btnAssemblePart" data-action="assemble-part" disabled>
                 다음 부품 가공 중 (1시간 30분 남음)
               </button>
+
+              <div class="atelier-story-feedback" id="atelierStoryFeedback" hidden role="status" aria-live="polite"></div>
             </div>
           </details>
 
@@ -474,7 +514,7 @@
                 <span class="collapse-chevron" aria-hidden="true">▾</span>
                 <h2 class="card-title">NO.1–10 수학 칼리버 컬렉션</h2>
               </span>
-              <span class="card-sub">완성 시 앞면 시계 즉시 교체</span>
+              <button type="button" class="text-link-btn" data-action="open-prologue">프롤로그 다시 읽기</button>
             </summary>
             <div class="card-collapse-body">
               <div class="atelier-caliber-list" id="atelierCaliberList"></div>
@@ -616,6 +656,10 @@
             </div>
           </div>
         </form>
+        <div class="reflection-cheer-box" id="reflectionCheerBox" hidden>
+          <div class="cheer-eyebrow">먼저 완주한 누군가의 한 줄</div>
+          <div class="cheer-quote" id="reflectionCheerText"></div>
+        </div>
       </div>
     </div>
 
@@ -677,16 +721,88 @@
       </div>
     </div>
 
+    <!-- 첫 실행 온보딩 오버레이 (Phase 3-1) -->
+    <div class="modal-backdrop narrative-backdrop is-onboarding" id="onboardingOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="onboardingHeadline">
+      <div class="narrative-card is-onboarding-card">
+        <div class="narrative-eyebrow">CASPER</div>
+        <h2 class="onboarding-headline" id="onboardingHeadline">이제, 흩어진 시간을 조립할 차례입니다.</h2>
+        <button type="button" class="ctrl-btn is-primary onboarding-start-btn" data-action="onboarding-start-5m">5분만 앉아보기</button>
+        <button type="button" class="text-link-btn onboarding-browse-btn" data-action="onboarding-dismiss">둘러보기</button>
+      </div>
+    </div>
+
+    <!-- 프롤로그 3장 카드 오버레이 (Phase 3-2) -->
+    <div class="modal-backdrop narrative-backdrop is-prologue" id="prologueOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="prologueCardText">
+      <div class="narrative-card is-prologue-card">
+        <div class="prologue-head">
+          <span class="narrative-eyebrow">PROLOGUE</span>
+          <button type="button" class="text-link-btn is-prologue-skip" data-action="prologue-skip">건너뛰기</button>
+        </div>
+        <div class="prologue-stage" id="prologueStage" data-action="prologue-next" role="button" tabindex="0" aria-label="탭하여 다음 카드로 넘기기">
+          <p class="prologue-text" id="prologueCardText"></p>
+        </div>
+        <div class="prologue-foot">
+          <div class="prologue-dots" id="prologueDots" aria-hidden="true">
+            <span class="prologue-dot is-active"></span>
+            <span class="prologue-dot"></span>
+            <span class="prologue-dot"></span>
+          </div>
+          <button type="button" class="small-btn is-solid" id="btnPrologueNext" data-action="prologue-next">다음</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 에필로그 전체 화면 오버레이 (Phase 3-4) -->
+    <div class="epilogue-overlay" id="epilogueOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="epilogueHeading">
+      <div class="epilogue-inner">
+        <div class="epilogue-eyebrow" id="epilogueHeading">NO.1 ALGEBRA · EPILOGUE</div>
+        <div class="epilogue-body" id="epilogueBody">
+          <p class="epilogue-para" style="--ep-delay: 0.2s;">고대어로 CASPER는 '보물을 지키는 자'를 뜻합니다.</p>
+          <p class="epilogue-para" style="--ep-delay: 1.3s;">아홉 개의 시계를 지나 다시 첫 번째 번호로 돌아온 오늘, 보이지 않는 곳에서 당신의 밤을 지키던 관리자가 비로소 금고의 문을 엽니다.</p>
+          <p class="epilogue-para" style="--ep-delay: 2.6s;">대수학(Algebra)은 알 수 없는 미지수 x를 찾아내는 학문입니다. 당신이 매일 타이머를 켜며 풀어내려 했던 x, 그리고 CASPER가 그토록 소중히 보관해 온 단 하나의 보물은 흘러간 숫자가 아니었습니다.</p>
+          <p class="epilogue-para epilogue-final-line" style="--ep-delay: 4.0s;">그 모든 시간을 견뎌내고, 지금 여기 단단히 앉아 있는 당신 자신입니다.</p>
+        </div>
+        <div class="epilogue-actions" style="--ep-delay: 5.0s;">
+          <button type="button" class="ctrl-btn is-primary epilogue-close-btn" data-action="close-epilogue">금고 닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 완주자 한 줄 응원 남기기 모달 -->
+    <div class="modal-backdrop" id="cheerComposeModal" hidden role="dialog" aria-modal="true" aria-labelledby="cheerComposeTitle">
+      <div class="modal-card">
+        <div class="modal-eyebrow">NO.1 ALGEBRA · FINISHER NOTE</div>
+        <h3 class="modal-title" id="cheerComposeTitle">다음 사람에게 한 줄 남기기</h3>
+        <p class="modal-desc">이름이나 연락처는 적지 말아 주세요. 검토 후 익명으로 다른 사람의 공방에 전해집니다.</p>
+        <form id="cheerComposeForm" class="modal-form">
+          <input type="text" id="cheerComposeInput" class="text-input" maxlength="60" placeholder="여정을 걸어갈 다음 사람에게 건넬 한 줄 (최대 60자)" aria-label="다음 사람에게 남길 한 줄 응원" />
+          <div class="cheer-compose-meta">
+            <span class="cheer-compose-error" id="cheerComposeError" hidden role="alert"></span>
+            <span class="cheer-compose-count" id="cheerComposeCount">0 / 60</span>
+          </div>
+          <div class="modal-actions is-reflection-actions">
+            <button type="submit" class="ctrl-btn is-primary" id="btnCheerSaveLocal">내 공방에 보관</button>
+            <div class="modal-sub-actions">
+              <button type="button" class="ctrl-btn" id="btnCheerSubmitExternal" data-action="submit-cheer-external" hidden>익명으로 전하기 ↗</button>
+              <button type="button" class="ctrl-btn is-ghost" data-action="close-cheer-compose">닫기</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- 토스트 알림 -->
     <div class="toast-banner" id="toastBanner" role="status" aria-live="polite" hidden></div>
   </div>
 
   <!-- Zero-Build Classic Scripts (file:// 100% 호환 · 캐시 버전 v1.7.0) -->
+  <script src="version.js?v=1.7.0"></script>
   <script src="timer-core.js?v=1.7.0"></script>
   <script src="audio-engine.js?v=1.7.0"></script>
   <script src="music-player.js?v=1.7.0"></script>
   <script src="atelier-engine.js?v=1.7.0"></script>
   <script src="storage.js?v=1.7.0"></script>
+  <script src="cheers-engine.js?v=1.7.0"></script>
   <script src="algebra-watch-engine.js?v=1.7.0"></script>
   <script src="satellite-engine.js?v=1.7.0"></script>
   <script src="jump-watch-engine.js?v=1.7.0"></script>
