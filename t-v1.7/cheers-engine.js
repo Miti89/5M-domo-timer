@@ -101,7 +101,16 @@
   }
 
   /**
+   * Returns the appropriate heading for a cheer message:
+   * sample messages written by the workshop keeper vs real finisher messages.
+   */
+  function getCheerTitle(message) {
+    return (message && message.sample) ? '공방지기의 한 줄' : '먼저 완주한 누군가의 한 줄';
+  }
+
+  /**
    * Picks at most one cheer per calendar day, without repeating until all messages have been seen.
+   * Prioritizes real finisher messages (sample !== true); falls back to samples only when no real messages exist.
    */
   function pickDailyCheer(messages, cheerState, todayKey, enabled) {
     const cur = (cheerState && typeof cheerState === 'object')
@@ -113,34 +122,38 @@
       : { lastShownDateKey: '', lastShownId: '', seenIds: [] };
 
     if (enabled === false) {
-      return { message: null, nextState: cur };
+      return { message: null, title: '', nextState: cur };
     }
     const list = Array.isArray(messages) ? messages : [];
     if (list.length === 0) {
-      return { message: null, nextState: cur };
+      return { message: null, title: '', nextState: cur };
     }
     const today = String(todayKey || '');
     if (today && cur.lastShownDateKey === today) {
-      return { message: null, nextState: cur };
+      return { message: null, title: '', nextState: cur };
     }
 
-    const validIds = new Set(list.map(function (m) { return m.id; }));
+    const realMessages = list.filter(function (m) { return m && !m.sample; });
+    const pool = realMessages.length > 0 ? realMessages : list;
+
+    const validIds = new Set(pool.map(function (m) { return m.id; }));
     let seenIds = cur.seenIds.filter(function (id) { return validIds.has(id); });
-    let unseen = list.filter(function (m) { return !seenIds.includes(m.id); });
+    let unseen = pool.filter(function (m) { return !seenIds.includes(m.id); });
 
     if (unseen.length === 0) {
-      // Every message has been shown once; start a fresh cycle (avoid immediate back-to-back repeat if >1)
+      // Every message in the active pool has been shown once; start a fresh cycle
       seenIds = [];
-      unseen = list.length > 1
-        ? list.filter(function (m) { return m.id !== cur.lastShownId; })
-        : list.slice();
+      unseen = pool.length > 1
+        ? pool.filter(function (m) { return m.id !== cur.lastShownId; })
+        : pool.slice();
     }
 
-    const picked = unseen[0] || list[0];
+    const picked = unseen[0] || pool[0];
     const nextSeen = seenIds.concat([picked.id]);
 
     return {
       message: picked,
+      title: getCheerTitle(picked),
       nextState: {
         lastShownDateKey: today,
         lastShownId: picked.id,
@@ -173,6 +186,7 @@
     validateCheerText: validateCheerText,
     buildSubmitUrl: buildSubmitUrl,
     parseCheersPayload: parseCheersPayload,
+    getCheerTitle: getCheerTitle,
     pickDailyCheer: pickDailyCheer,
     isReturningAfterDays: isReturningAfterDays
   };

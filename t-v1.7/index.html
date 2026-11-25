@@ -11,8 +11,8 @@
   <title>CASPER — 시간을 보관하는 공방</title>
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23C8CED6' stroke='%234A5058' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='24' fill='%2325282D'/%3E%3Cpath d='M32 32 L49 18 A22 22 0 0 1 49 46 Z' fill='%23D94336' opacity='0.88'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%23E5C26B'/%3E%3C/svg%3E" />
-  <link rel="manifest" href="manifest.json?v=1.7.0" />
-  <link rel="stylesheet" href="styles.css?v=1.7.0" />
+  <link rel="manifest" href="manifest.json?v=1.7.1" />
+  <link rel="stylesheet" href="styles.css?v=1.7.1" />
 </head>
 <body>
   <div class="app-shell" id="appShell">
@@ -81,6 +81,7 @@
 
             <div class="watch-frame">
               <div id="satelliteMount" class="satellite-mount"></div>
+              <div class="watch-design-badge" id="watchDesignBadge" hidden>설계 중 · 임시 무브먼트</div>
             </div>
 
             <div class="front-console-col">
@@ -181,10 +182,18 @@
                 </div>
               </div>
 
+              <!-- 새 버전 업데이트 적용 배너 (v1.7.1) -->
+              <div class="gentle-banner is-update-banner" id="swUpdateBanner" hidden role="status" aria-live="polite">
+                <div class="gentle-banner-copy">새 버전이 준비됐어요</div>
+                <div class="gentle-banner-actions">
+                  <button type="button" class="small-btn is-solid" data-action="apply-sw-update">적용</button>
+                </div>
+              </div>
+
               <!-- 완주자의 한 줄 응원 배너 -->
               <div class="gentle-banner is-cheer-banner" id="cheerNoticeBanner" hidden role="status" aria-live="polite">
                 <div class="cheer-banner-body">
-                  <div class="cheer-eyebrow">먼저 완주한 누군가의 한 줄</div>
+                  <div class="cheer-eyebrow" id="cheerNoticeTitle"></div>
                   <div class="cheer-quote" id="cheerNoticeText"></div>
                 </div>
                 <div class="gentle-banner-actions">
@@ -312,6 +321,17 @@
               </label>
             </div>
           </div>
+
+          <div class="card-block">
+            <div class="card-head">
+              <h2 class="card-title">CASPER 정보</h2>
+              <span class="card-sub" id="appVersionLabel">v1.7.1</span>
+            </div>
+            <div class="option-row">
+              <span class="card-sub">서사 · 프롤로그</span>
+              <button type="button" class="text-link-btn" data-action="open-prologue">프롤로그 다시 읽기</button>
+            </div>
+          </div>
         </section>
 
         <!-- 탭 2: 사운드 믹서 & YouTube Music (접이식 섹션) -->
@@ -322,10 +342,12 @@
                 <span class="collapse-chevron" aria-hidden="true">▾</span>
                 <h2 class="card-title">YouTube Music 공부 플레이어</h2>
               </span>
-              <button type="button" class="text-link-btn" data-action="open-ytm-popup" title="유튜브 뮤직 공식 웹 팝업으로 열기">YT Music 팝업 ↗</button>
             </summary>
 
             <div class="card-collapse-body">
+              <div class="card-body-actions">
+                <button type="button" class="text-link-btn" data-action="open-ytm-popup" title="유튜브 뮤직 공식 웹 팝업으로 열기">YT Music 팝업 ↗</button>
+              </div>
               <form class="music-url-form" id="musicUrlForm">
                 <input type="url" id="musicUrlInput" class="text-input" placeholder="YouTube Music 곡·플레이리스트 링크" aria-label="YouTube Music 링크 입력" />
                 <div class="music-form-subrow">
@@ -352,9 +374,11 @@
                 <span class="collapse-chevron" aria-hidden="true">▾</span>
                 <h2 class="card-title">종료 알림음</h2>
               </span>
-              <button type="button" class="text-link-btn" data-action="test-alarm">미리 듣기</button>
             </summary>
             <div class="card-collapse-body">
+              <div class="card-body-actions">
+                <button type="button" class="text-link-btn" data-action="test-alarm">미리 듣기</button>
+              </div>
               <div class="segmented-row" role="group" aria-label="종료 알림음 선택">
                 <button type="button" class="seg-btn is-active" data-action="set-alarm" data-alarm="gong" aria-pressed="true">5270P 공</button>
                 <div class="rocker-pivot-divider" aria-hidden="true"></div>
@@ -377,10 +401,12 @@
                 <span class="collapse-chevron" aria-hidden="true">▾</span>
                 <h2 class="card-title">집중 사운드 믹서 (오프라인 자체 합성)</h2>
               </span>
-              <button type="button" class="text-link-btn" data-action="mute-ambience">전체 음소거 (M)</button>
             </summary>
 
             <div class="card-collapse-body">
+              <div class="card-body-actions">
+                <button type="button" class="text-link-btn" data-action="mute-ambience">전체 음소거 (M)</button>
+              </div>
               <div class="mixer-list">
                 <div class="mixer-item">
                   <div class="mixer-label-row">
@@ -500,6 +526,8 @@
 
               <div class="atelier-parts-grid" id="atelierPartsGrid"></div>
 
+              <div class="atelier-design-notice" id="atelierDesignNotice" hidden>디자인은 준비 중이에요. 조립한 시간은 그대로 보관됩니다.</div>
+
               <button type="button" class="ctrl-btn atelier-assemble-btn" id="btnAssemblePart" data-action="assemble-part" disabled>
                 다음 부품 가공 중 (1시간 30분 남음)
               </button>
@@ -514,9 +542,12 @@
                 <span class="collapse-chevron" aria-hidden="true">▾</span>
                 <h2 class="card-title">NO.1–10 수학 칼리버 컬렉션</h2>
               </span>
-              <button type="button" class="text-link-btn" data-action="open-prologue">프롤로그 다시 읽기</button>
+              <span class="card-sub">완성 시 앞면 시계 즉시 교체</span>
             </summary>
             <div class="card-collapse-body">
+              <div class="card-body-actions">
+                <button type="button" class="text-link-btn" data-action="open-prologue">프롤로그 다시 읽기</button>
+              </div>
               <div class="atelier-caliber-list" id="atelierCaliberList"></div>
             </div>
           </details>
@@ -657,7 +688,7 @@
           </div>
         </form>
         <div class="reflection-cheer-box" id="reflectionCheerBox" hidden>
-          <div class="cheer-eyebrow">먼저 완주한 누군가의 한 줄</div>
+          <div class="cheer-eyebrow" id="reflectionCheerTitle"></div>
           <div class="cheer-quote" id="reflectionCheerText"></div>
         </div>
       </div>
@@ -795,19 +826,19 @@
     <div class="toast-banner" id="toastBanner" role="status" aria-live="polite" hidden></div>
   </div>
 
-  <!-- Zero-Build Classic Scripts (file:// 100% 호환 · 캐시 버전 v1.7.0) -->
-  <script src="version.js?v=1.7.0"></script>
-  <script src="timer-core.js?v=1.7.0"></script>
-  <script src="audio-engine.js?v=1.7.0"></script>
-  <script src="music-player.js?v=1.7.0"></script>
-  <script src="atelier-engine.js?v=1.7.0"></script>
-  <script src="storage.js?v=1.7.0"></script>
-  <script src="cheers-engine.js?v=1.7.0"></script>
-  <script src="algebra-watch-engine.js?v=1.7.0"></script>
-  <script src="satellite-engine.js?v=1.7.0"></script>
-  <script src="jump-watch-engine.js?v=1.7.0"></script>
-  <script src="cycloid-watch-engine.js?v=1.7.0"></script>
-  <script src="geometry-watch-engine.js?v=1.7.0"></script>
-  <script src="app.js?v=1.7.0"></script>
+  <!-- Zero-Build Classic Scripts (file:// 100% 호환 · 캐시 버전 v1.7.1) -->
+  <script src="version.js?v=1.7.1"></script>
+  <script src="timer-core.js?v=1.7.1"></script>
+  <script src="audio-engine.js?v=1.7.1"></script>
+  <script src="music-player.js?v=1.7.1"></script>
+  <script src="atelier-engine.js?v=1.7.1"></script>
+  <script src="storage.js?v=1.7.1"></script>
+  <script src="cheers-engine.js?v=1.7.1"></script>
+  <script src="algebra-watch-engine.js?v=1.7.1"></script>
+  <script src="satellite-engine.js?v=1.7.1"></script>
+  <script src="jump-watch-engine.js?v=1.7.1"></script>
+  <script src="cycloid-watch-engine.js?v=1.7.1"></script>
+  <script src="geometry-watch-engine.js?v=1.7.1"></script>
+  <script src="app.js?v=1.7.1"></script>
 </body>
 </html>

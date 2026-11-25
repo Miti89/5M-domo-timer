@@ -74,6 +74,9 @@
   let expandedCodexCaliberId = null;
   let activeHintKey = null;
   let swRegistration = null;
+  let waitingServiceWorker = null;
+  let swRefreshing = false;
+  let lastSwUpdateCheckMs = 0;
   let cheersMessages = [];
 
   const PROLOGUE_CARDS = [
@@ -106,6 +109,7 @@
     atelierNextPartPct: document.getElementById('atelierNextPartPct'),
     atelierBarFill: document.getElementById('atelierBarFill'),
     atelierPartsGrid: document.getElementById('atelierPartsGrid'),
+    atelierDesignNotice: document.getElementById('atelierDesignNotice'),
     btnAssemblePart: document.getElementById('btnAssemblePart'),
     atelierStoryFeedback: document.getElementById('atelierStoryFeedback'),
     atelierCaliberList: document.getElementById('atelierCaliberList'),
@@ -126,6 +130,7 @@
     btnStandbyMusic: document.getElementById('btnStandbyMusic'),
     standbyMusicPill: document.getElementById('standbyMusicPill'),
     satelliteMount: document.getElementById('satelliteMount'),
+    watchDesignBadge: document.getElementById('watchDesignBadge'),
     modeDrumChassis: document.getElementById('modeDrumChassis'),
     modeDrumViewport: document.getElementById('modeDrumViewport'),
     modeDrumStage: document.getElementById('modeDrumStage'),
@@ -161,10 +166,14 @@
     iosInstallBanner: document.getElementById('iosInstallBanner'),
     featureHintBanner: document.getElementById('featureHintBanner'),
     featureHintText: document.getElementById('featureHintText'),
+    swUpdateBanner: document.getElementById('swUpdateBanner'),
     cheerNoticeBanner: document.getElementById('cheerNoticeBanner'),
+    cheerNoticeTitle: document.getElementById('cheerNoticeTitle'),
     cheerNoticeText: document.getElementById('cheerNoticeText'),
     chkCheersEnabled: document.getElementById('chkCheersEnabled'),
+    appVersionLabel: document.getElementById('appVersionLabel'),
     reflectionCheerBox: document.getElementById('reflectionCheerBox'),
+    reflectionCheerTitle: document.getElementById('reflectionCheerTitle'),
     reflectionCheerText: document.getElementById('reflectionCheerText'),
     cheerComposeModal: document.getElementById('cheerComposeModal'),
     cheerComposeForm: document.getElementById('cheerComposeForm'),
@@ -592,13 +601,27 @@
     if (!res || !res.message) return null;
     narrativeMeta.cheerState = res.nextState;
     saveNarrativeState();
-    return res.message.text;
+    return {
+      title: res.title || window.CasperCheers.getCheerTitle(res.message),
+      text: res.message.text
+    };
   }
 
-  function showCheerBanner(text) {
-    if (!text || !dom.cheerNoticeBanner || !dom.cheerNoticeText) return;
-    dom.cheerNoticeText.textContent = text;
+  function showCheerBanner(cheer) {
+    if (!cheer || !cheer.text || !dom.cheerNoticeBanner || !dom.cheerNoticeText) return;
+    if (dom.cheerNoticeTitle) {
+      dom.cheerNoticeTitle.textContent = cheer.title || '먼저 완주한 누군가의 한 줄';
+    }
+    dom.cheerNoticeText.textContent = cheer.text;
     dom.cheerNoticeBanner.hidden = false;
+  }
+
+  function syncSwUpdateBanner() {
+    if (!dom.swUpdateBanner) return;
+    const show = (window.CasperVersion && typeof window.CasperVersion.shouldShowUpdateBanner === 'function')
+      ? window.CasperVersion.shouldShowUpdateBanner(Boolean(waitingServiceWorker), Boolean(timer.state.running))
+      : (Boolean(waitingServiceWorker) && !timer.state.running);
+    dom.swUpdateBanner.hidden = !show;
   }
 
   function dismissCheerBanner() {
@@ -1533,6 +1556,18 @@
     if (satellite && typeof satellite.setFinish === 'function') {
       satellite.setFinish(finishId || 'steel');
     }
+    if (satellite && typeof satellite.setModelLabel === 'function') {
+      const calDef = window.CasperAtelier && typeof window.CasperAtelier.getCaliberDef === 'function'
+        ? window.CasperAtelier.getCaliberDef(targetId)
+        : null;
+      satellite.setModelLabel(calDef ? calDef.name : 'NO.5 ELLIPSE');
+    }
+    if (dom.watchDesignBadge) {
+      const inDesign = Boolean(
+        window.CasperAtelier && typeof window.CasperAtelier.isCaliberInDesign === 'function' && window.CasperAtelier.isCaliberInDesign(targetId)
+      );
+      dom.watchDesignBadge.hidden = !inDesign;
+    }
     syncLiveStatusStrip();
   }
 
@@ -1688,6 +1723,7 @@
       dom.podDiscardRow.hidden = !(st.mode !== 'clock' && elapsedNow > 0);
     }
     syncLiveStatusStrip();
+    syncSwUpdateBanner();
   }
 
   function renderSubjects() {
@@ -1929,6 +1965,16 @@
       }).join('');
     }
 
+    if (dom.atelierDesignNotice) {
+      const isProjInDesign = Boolean(
+        !snap.allProjectsComplete &&
+        window.CasperAtelier &&
+        typeof window.CasperAtelier.isCaliberInDesign === 'function' &&
+        window.CasperAtelier.isCaliberInDesign(proj.id)
+      );
+      dom.atelierDesignNotice.hidden = !isProjInDesign;
+    }
+
     if (dom.btnAssemblePart) {
       if (snap.allProjectsComplete) {
         dom.btnAssemblePart.disabled = true;
@@ -2007,7 +2053,7 @@
 
         return [
           '<div class="caliber-item">',
-          `  <div class="caliber-row${c.active ? ' is-equipped' : ''}${c.unlocked ? ' is-unlocked' : ' is-locked'}${c.playable ? ' is-playable' : ' is-concept'}" data-action="toggle-codex-story" data-caliber="${escapeHtml(c.id)}" aria-expanded="${String(isExpanded)}">`,
+          `  <div class="caliber-row${c.active ? ' is-equipped' : ''}${c.unlocked ? ' is-unlocked' : ' is-locked'}${c.playable ? ' is-playable' : ' is-concept'}${c.inDesign ? ' is-in-design' : ''}" data-action="toggle-codex-story" data-caliber="${escapeHtml(c.id)}" aria-expanded="${String(isExpanded)}">`,
           `    <span class="caliber-letter-badge${c.active ? ' is-active' : (c.playable ? ' is-playable' : '')}" aria-hidden="true">${escapeHtml(c.num || c.letter)}</span>`,
           '    <div class="caliber-info">',
           `      <div class="caliber-name">${escapeHtml(c.name)} <span class="caliber-ko">${escapeHtml(c.korean)}</span>${designTag}</div>`,
@@ -2071,9 +2117,12 @@
     if (dom.reflectionInput) dom.reflectionInput.value = '';
     if (dom.reflectionCheerBox && dom.reflectionCheerText) {
       if (o.isPartial) {
-        const cheerText = maybeConsumeDailyCheer();
-        if (cheerText) {
-          dom.reflectionCheerText.textContent = cheerText;
+        const cheer = maybeConsumeDailyCheer();
+        if (cheer && cheer.text) {
+          if (dom.reflectionCheerTitle) {
+            dom.reflectionCheerTitle.textContent = cheer.title || '먼저 완주한 누군가의 한 줄';
+          }
+          dom.reflectionCheerText.textContent = cheer.text;
           dom.reflectionCheerBox.hidden = false;
         } else {
           dom.reflectionCheerBox.hidden = true;
@@ -2359,10 +2408,6 @@
 
     const target = e.target.closest('[data-action]');
     if (!target) return;
-    if (target.closest('summary')) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
     const action = target.getAttribute('data-action');
 
     switch (action) {
@@ -2594,6 +2639,13 @@
 
       case 'dismiss-cheer-banner':
         dismissCheerBanner();
+        break;
+
+      case 'apply-sw-update':
+        if (waitingServiceWorker) {
+          persistActiveSession();
+          waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
+        }
         break;
 
       case 'open-cheer-compose':
@@ -3314,12 +3366,22 @@
     }
   });
 
-  // Re-acquire Wake Lock & snap immediately when returning from background tab
+  // Re-acquire Wake Lock, snap immediately & check for SW updates (at most once/hour) when returning
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) {
       syncWakeLock(timer.state.running);
       const evt = timer.tick(Date.now());
       if (evt) handleCompletionEvent(evt);
+      if (swRegistration && typeof swRegistration.update === 'function') {
+        const nowMs = Date.now();
+        const shouldCheck = (window.CasperVersion && typeof window.CasperVersion.shouldCheckForUpdate === 'function')
+          ? window.CasperVersion.shouldCheckForUpdate(lastSwUpdateCheckMs, nowMs)
+          : (nowMs - lastSwUpdateCheckMs >= 3600000);
+        if (shouldCheck) {
+          lastSwUpdateCheckMs = nowMs;
+          swRegistration.update().catch(function () {});
+        }
+      }
     }
   });
 
@@ -3404,6 +3466,9 @@
   applyAlarmType(prefs.alarmType, false);
   if (dom.chkHourlyChime) dom.chkHourlyChime.checked = Boolean(prefs.hourlyChime);
   if (dom.chkCheersEnabled) dom.chkCheersEnabled.checked = prefs.cheersEnabled !== false;
+  if (dom.appVersionLabel && window.CASPER_VERSION) {
+    dom.appVersionLabel.textContent = 'v' + window.CASPER_VERSION;
+  }
   setMusicAutoSync(prefs.musicAutoSync !== false);
   renderMusicPresets();
   syncMusicControlsUI();
@@ -3446,10 +3511,37 @@
   requestAnimationFrame(renderFrame);
 
   // Safe PWA Service Worker registration (http/https only; skipped safely on file://)
-  // Never force-reloads when a new SW installs so running timers are never interrupted.
+  // Never force-reloads while a timer is running; surfaces an update banner when idle.
   if ('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')) {
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (swRefreshing) return;
+      swRefreshing = true;
+      window.location.reload();
+    });
+
     navigator.serviceWorker.register('sw.js').then(function (reg) {
       swRegistration = reg;
+      lastSwUpdateCheckMs = Date.now();
+
+      function trackWaiting(worker) {
+        if (!worker) return;
+        waitingServiceWorker = worker;
+        syncSwUpdateBanner();
+      }
+
+      if (reg.waiting) {
+        trackWaiting(reg.waiting);
+      }
+
+      reg.addEventListener('updatefound', function () {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', function () {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            trackWaiting(reg.waiting || newWorker);
+          }
+        });
+      });
     }).catch(function () {});
   }
 })();

@@ -828,6 +828,11 @@
     return null;
   }
 
+  function isCaliberInDesign(calId) {
+    const def = getCaliberDef(calId);
+    return Boolean(def && def.inDesign);
+  }
+
   function createEmptyAssembledParts() {
     const map = {};
     for (let i = 0; i < BUILD_ORDER.length; i++) {
@@ -1491,6 +1496,8 @@
     PARTS_BY_CALIBER: PARTS_BY_CALIBER,
     CALIBERS: CALIBERS,
     FINISHES: FINISHES,
+    getCaliberDef: getCaliberDef,
+    isCaliberInDesign: isCaliberInDesign,
     createEmptyAssembledParts: createEmptyAssembledParts,
     createDefaultAtelierState: createDefaultAtelierState,
     sanitizeAtelierState: sanitizeAtelierState,

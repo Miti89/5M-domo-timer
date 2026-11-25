@@ -1148,6 +1148,7 @@
       subGear2El: subGear2El,
       rollerBallsEl: rollerBallsEl,
       visualRingEl: visualRingEl,
+      botEngravingPath: botEngravingPath,
       crownEl: crownBuilt.crownEl,
       crownSlideEl: crownBuilt.crownSlideEl,
       crownKnurlsEl: crownBuilt.crownKnurlsEl,
@@ -1490,6 +1491,12 @@
       }
     }
 
+    function setModelLabel(labelText) {
+      if (parts.botEngravingPath) {
+        parts.botEngravingPath.textContent = String(labelText || 'NO.5 ELLIPSE');
+      }
+    }
+
     return {
       svgRoot: parts.svg,
       render: render,
@@ -1498,7 +1505,8 @@
       getCrownPosition: function () { return crownPosition; },
       setCrownPulled: setCrownPulled,
       isCrownPulled: function () { return crownPosition > 0; },
-      setFinish: setFinish
+      setFinish: setFinish,
+      setModelLabel: setModelLabel
     };
   }
 

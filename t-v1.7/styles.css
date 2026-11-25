@@ -4947,18 +4947,78 @@ body.is-standby .toast-banner {
   }
 }
 
-/* Phase 2: In-Design Caliber Badge */
+/* Phase 2 / v1.7.1: In-Design Caliber Badge & Dashed Row */
 .caliber-design-tag {
   display: inline-block;
-  margin-left: 5px;
-  padding: 1px 6px;
+  margin-left: 6px;
+  padding: 1px 7px;
   border-radius: 999px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 800;
   letter-spacing: 0.02em;
-  color: var(--ink-muted, #606a78);
-  background: rgba(120, 132, 148, 0.14);
+  color: #9A4A1F;
+  background: rgba(200, 75, 49, 0.11);
+  border: 1px dashed rgba(200, 75, 49, 0.55);
   vertical-align: middle;
+}
+
+.caliber-row.is-in-design {
+  border-style: dashed;
+  border-color: rgba(186, 98, 52, 0.42);
+}
+
+.watch-frame {
+  position: relative;
+}
+
+.watch-design-badge {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+  z-index: 6;
+  pointer-events: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  color: #F6E9D4;
+  background: rgba(20, 24, 31, 0.78);
+  border: 1px dashed rgba(226, 152, 92, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.watch-design-badge[hidden] {
+  display: none;
+}
+
+.atelier-design-notice {
+  margin-bottom: 8px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #7D4420;
+  background: rgba(200, 75, 49, 0.07);
+  border: 1px dashed rgba(200, 75, 49, 0.36);
+}
+
+.atelier-design-notice[hidden] {
+  display: none;
+}
+
+.card-body-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.gentle-banner.is-update-banner {
+  background: rgba(240, 246, 255, 0.95);
+  border-color: rgba(62, 112, 184, 0.38);
 }
 
 /* =========================================================================

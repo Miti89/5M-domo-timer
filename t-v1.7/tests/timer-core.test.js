@@ -760,6 +760,41 @@
   CS.importBackupJson(cheerBackup);
   assert(CS.loadNarrativeMeta().myCheer === '당신의 5분도 분명 빛나요.', 'importBackupJson restores myCheer');
 
+  // -------------------------------------------------------------------------
+  // 16. CASPER v1.7.1 — Update Banner Gate, Cheers Priority & In-Design Check
+  // -------------------------------------------------------------------------
+  const CV = globalThis.CasperVersion;
+  assert(VER === '1.7.1', 'CASPER_VERSION is bumped to 1.7.1');
+  assert(CV && typeof CV.shouldShowUpdateBanner === 'function', 'CasperVersion.shouldShowUpdateBanner is available');
+  assert(CV.shouldShowUpdateBanner(true, true) === false, 'Update banner stays hidden while timer is running');
+  assert(CV.shouldShowUpdateBanner(true, false) === true, 'Update banner shows once timer stops/completes');
+  assert(CV.shouldShowUpdateBanner(false, false) === false, 'Update banner stays hidden when no waiting SW exists');
+  assert(CV.shouldCheckForUpdate(0, tBase) === true, 'Initial visibility check triggers SW update check');
+  assert(CV.shouldCheckForUpdate(tBase, tBase + 30 * 60000) === false, 'SW update check is throttled within 1 hour');
+  assert(CV.shouldCheckForUpdate(tBase, tBase + 61 * 60000) === true, 'SW update check runs again after 1 hour');
+
+  // Sample vs Real finisher cheer title & priority
+  assert(CH.getCheerTitle({ id: 'c001', text: '예시', sample: true }) === '공방지기의 한 줄', 'Sample cheer uses title "공방지기의 한 줄"');
+  assert(CH.getCheerTitle({ id: 'c100', text: '완주자' }) === '먼저 완주한 누군가의 한 줄', 'Real finisher cheer uses title "먼저 완주한 누군가의 한 줄"');
+  assert(d1.title === '공방지기의 한 줄', 'pickDailyCheer returns "공방지기의 한 줄" when only sample cheers exist');
+
+  const mixedCheers = parsedCheers.concat([
+    { id: 'r001', text: '실제 완주자의 첫 응원입니다.', sample: false }
+  ]);
+  const mixedPick = CH.pickDailyCheer(mixedCheers, {}, '2026-11-29', true);
+  assert(mixedPick.message && mixedPick.message.id === 'r001' && mixedPick.title === '먼저 완주한 누군가의 한 줄', 'Real finisher cheer is prioritized over sample cheers and uses finisher title');
+  const mixedPickNext = CH.pickDailyCheer(mixedCheers, mixedPick.nextState, '2026-11-30', true);
+  assert(mixedPickNext.message && mixedPickNext.message.id === 'r001', 'Sample cheers are not chosen when real finisher cheers exist');
+
+  // inDesign caliber badge check
+  assert(typeof CA.isCaliberInDesign === 'function', 'CasperAtelier.isCaliberInDesign is exported');
+  assert(CA.isCaliberInDesign('cal-d') === true && CA.isCaliberInDesign('cal-f') === true && CA.isCaliberInDesign('cal-h') === true && CA.isCaliberInDesign('cal-i') === true && CA.isCaliberInDesign('cal-j') === true, 'All 5 in-design calibers (D, F, H, I, J) return true');
+  assert(CA.isCaliberInDesign('cal-a') === false && CA.isCaliberInDesign('cal-b') === false && CA.isCaliberInDesign('cal-c') === false && CA.isCaliberInDesign('cal-e') === false && CA.isCaliberInDesign('cal-g') === false, 'All 5 dedicated-engine calibers (A, B, C, E, G) return false');
+
+  // Verify no <button> remains inside <summary> in index.html
+  const summaryBlocks = htmlSrc.match(/<summary[\s\S]*?<\/summary>/g) || [];
+  assert(summaryBlocks.length > 0 && summaryBlocks.every(function (b) { return b.indexOf('<button') === -1; }), 'No <button> elements remain inside <summary> in index.html');
+
   logLine('TEST SUMMARY: ' + passed + ' passed, ' + failed + ' failed');
   if (failed > 0) {
     if (typeof process !== 'undefined' && process && typeof process.exit === 'function') {
