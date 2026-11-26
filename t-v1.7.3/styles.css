@@ -4375,8 +4375,13 @@ body.is-standby .toast-banner {
   .monolith-face {
     backface-visibility: visible;
     -webkit-backface-visibility: visible;
-    transform: none !important;
     transition: none;
+  }
+  /* no !important here: an !important transform would block the turn animation (v1.7.3) */
+  .monolith-scene .monolith-flipper .monolith-face,
+  .monolith-scene .monolith-flipper .monolith-face.is-front,
+  .monolith-scene .monolith-flipper .monolith-face.is-back {
+    transform: none;
   }
 
   .monolith-flipper:not(.is-flipped) .monolith-face.is-back {
@@ -5704,7 +5709,7 @@ a:focus:not(:focus-visible), input:focus:not(:focus-visible), summary:focus:not(
   body.is-standby .music-player-dock:not([hidden]) { width: min(410px, 42vw); }
 }
 /* Portrait tablet standby with music open: watch fills the space above the player */
-@media (pointer: coarse) and (orientation: portrait) and (min-width: 600px) and (min-height: 760px) {
+@media (orientation: portrait) and (max-width: 1023px) and (min-height: 640px) {
   body.is-standby.has-standby-music-open .app-shell {
     height: 100dvh;
     min-height: 0;
@@ -5736,7 +5741,7 @@ a:focus:not(:focus-visible), input:focus:not(:focus-visible), summary:focus:not(
     width: min(100cqw, calc(100cqh - 8px), 560px);
     max-width: none;
   }
-  body.is-standby.has-standby-music-open .digital-readout { font-size: 40px; min-height: 44px; }
+  body.is-standby.has-standby-music-open .digital-readout { font-size: clamp(32px, 9vw, 40px); min-height: 40px; }
 }
 
 /* ---------- Smooth standby swap: chrome fades in while the watch glides (app.js animateStandbySwap) ---------- */
@@ -5751,4 +5756,376 @@ body.is-mode-swapping .toast-banner {
 }
 @media (prefers-reduced-motion: reduce) {
   body.is-mode-swapping * { animation: none !important; }
+}
+
+/* v1.7.3: front settings button is a gear-only icon button */
+#btnFlipToBack {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  gap: 0;
+}
+#btnFlipToBack .flip-icon-svg { width: 22px; height: 22px; }
+/* gear only, no box, slightly see-through */
+#btnFlipToBack,
+#btnFlipToBack:hover,
+#btnFlipToBack:active,
+#btnFlipToBack:focus {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  transform: none;
+  color: var(--ink-primary, #1B2028);
+  opacity: 0.55;
+  transition: opacity 0.2s ease, transform 0.3s ease;
+}
+#btnFlipToBack:hover { opacity: 0.8; }
+#btnFlipToBack:active { opacity: 0.9; transform: rotate(30deg); }
+#btnFlipToBack:focus-visible { outline: 2px solid rgba(27,32,40,0.35); outline-offset: 2px; border-radius: 50%; }
+#btnFlipToBack::before, #btnFlipToBack::after { display: none !important; }
+
+/* v1.7.3: simpler music dock — title + transport, one volume line, white noise as 3 on/off chips */
+.dock-noise {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+.dock-noise-label { display: flex; flex-direction: column; font-size: 11.5px; font-weight: 800; color: var(--ink-secondary); line-height: 1.25; white-space: nowrap; }
+.dock-noise-label small { font-size: 10px; font-weight: 600; color: var(--ink-muted); opacity: 0.8; }
+body.is-timer-running .dock-noise-label small { color: var(--accent-focus); opacity: 1; }
+.dock-noise-chips { display: flex; gap: 6px; }
+.noise-chip {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(57, 66, 78, 0.28);
+  background: transparent;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.noise-chip.is-on { background: var(--ink-primary); border-color: var(--ink-primary); color: #fff; }
+.music-player-dock #btnMusicMute,
+.music-player-dock .music-vol-val { display: none; }
+.music-player-dock .dock-mini-btn.is-play-main { min-width: 40px; font-size: 13px; }
+.music-dock-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.music-dock-info { min-width: 0; flex: 1 1 auto; }
+body.is-standby #featureHintBanner { display: none !important; }
+.noise-note { margin: 0 0 6px; font-size: 11.5px; color: var(--ink-muted); }
+
+/* v1.7.3: onboarding headline on one line */
+.onboarding-headline {
+  white-space: nowrap;
+  font-size: clamp(13px, 4.4vw, 20px);
+  letter-spacing: -0.02em;
+}
+
+
+/* v1.7.3: smaller subject tag + drop-down picker that slides open under it */
+.monolith-face-bar { position: relative; }
+.front-subject-tag {
+  min-height: 30px;
+  height: 30px;
+  padding: 0 10px 0 9px;
+  gap: 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(57, 66, 78, 0.16);
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+.front-subject-tag:hover { background: rgba(255, 255, 255, 0.7); border-color: rgba(57, 66, 78, 0.26); }
+.front-subject-tag .chip-caret { font-size: 9px; transition: transform 0.25s ease; }
+.front-subject-tag[aria-expanded="true"] .chip-caret { transform: rotate(180deg); }
+.front-subject-dot { width: 5px; height: 5px; box-shadow: none; }
+
+.subject-drop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px;
+  max-width: min(260px, 80vw);
+  border-radius: 14px;
+  border: 1px solid rgba(57, 66, 78, 0.12);
+  background: rgba(250, 251, 253, 0.92);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 28px rgba(20, 26, 36, 0.14);
+  transform-origin: top left;
+  clip-path: inset(0 0 100% 0 round 14px);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: clip-path 0.26s cubic-bezier(.2,.8,.2,1), opacity 0.18s ease, transform 0.26s cubic-bezier(.2,.8,.2,1);
+}
+.subject-drop[hidden] { display: none; }
+.subject-drop.is-open { clip-path: inset(0 0 0 0 round 14px); opacity: 1; transform: none; }
+.subject-drop-chips { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+.subject-drop-chips .subject-chip {
+  display: block;
+  width: 100%;
+  min-width: 120px;
+  text-align: left;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-primary, #1B2028);
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.2s ease, transform 0.25s ease, background 0.15s ease;
+}
+.subject-drop.is-open .subject-chip { opacity: 1; transform: none; }
+.subject-drop.is-open .subject-chip:nth-child(2) { transition-delay: 0.03s; }
+.subject-drop.is-open .subject-chip:nth-child(3) { transition-delay: 0.06s; }
+.subject-drop.is-open .subject-chip:nth-child(4) { transition-delay: 0.09s; }
+.subject-drop.is-open .subject-chip:nth-child(5) { transition-delay: 0.12s; }
+.subject-drop.is-open .subject-chip:nth-child(n+6) { transition-delay: 0.15s; }
+.subject-drop-chips .subject-chip:hover { background: rgba(27, 32, 40, 0.06); }
+.subject-drop-chips .subject-chip.is-active { background: rgba(27, 32, 40, 0.08); font-weight: 800; }
+.subject-drop-chips .subject-chip.is-active::before { content: '● '; color: var(--accent-focus, #C84B31); font-size: 8px; vertical-align: 2px; }
+.subject-drop-manage {
+  width: 100%;
+  text-align: left;
+  padding: 7px 12px 4px;
+  border: 0;
+  border-top: 1px solid rgba(57, 66, 78, 0.1);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-muted, #6B7380);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: reduce) {
+  .subject-drop, .subject-drop-chips .subject-chip { transition: none; }
+}
+
+/* v1.7.3: tidier readout spacing — compact time chip hugging the time, even vertical rhythm */
+body:not(.is-standby) .hero-stage .readout-time-row { column-gap: 6px; }
+body:not(.is-standby) .hero-stage .quick-time-chip {
+  min-height: 26px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  align-self: center;
+}
+body:not(.is-standby) .hero-stage .readout-block { gap: 0; }
+body:not(.is-standby) .hero-stage .phase-badge-row { margin-bottom: 6px; }
+body:not(.is-standby) .hero-stage .reserve-gauge { margin-top: 8px; }
+body:not(.is-standby) .hero-stage .status-line { margin-top: 8px; }
+body:not(.is-standby) .hero-stage .front-console-col .watch-control-pod { margin-top: 18px; }
+.subject-drop-chips .subject-chip { min-height: 0 !important; height: auto !important; line-height: 1.3; padding: 7px 12px 7px 22px; position: relative; }
+.subject-drop-chips .subject-chip::before,
+.subject-drop-chips .subject-chip.is-active::before {
+  content: ''; position: absolute; left: 10px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px;
+  border-radius: 50%; background: transparent; box-shadow: none; transform: none;
+}
+.subject-drop-chips .subject-chip.is-active::before { background: var(--accent-focus, #C84B31); }
+
+/* v1.7.3: caliber list badge shows NO.n */
+.caliber-letter-badge { width: auto; min-width: 42px; padding: 0 6px; font-size: 10.5px; letter-spacing: 0; }
+
+/* v1.7.3: caliber list rebalanced — number as a small eyebrow, name, one-line subtitle, compact button */
+.caliber-row { padding: 12px 12px 12px 14px; gap: 12px; border-radius: 12px; align-items: center; }
+.caliber-row.is-equipped { border-color: rgba(200, 75, 49, 0.55); box-shadow: inset 3px 0 0 var(--accent-focus, #C84B31); }
+.caliber-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.caliber-info .caliber-letter-badge,
+.caliber-info .caliber-letter-badge.is-playable,
+.caliber-info .caliber-letter-badge.is-active {
+  width: auto; min-width: 0; height: auto; padding: 0; border: 0; border-radius: 0;
+  background: none; box-shadow: none; justify-content: flex-start;
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--ink-muted, #6B7380);
+}
+.caliber-info .caliber-letter-badge.is-active { color: var(--accent-focus, #C84B31); }
+.caliber-name { font-size: 15px; line-height: 1.2; letter-spacing: 0.02em; display: flex; align-items: center; gap: 6px; }
+.caliber-sub {
+  font-size: 12px; line-height: 1.35; color: var(--ink-muted, #6B7380);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.caliber-row .small-btn {
+  flex-shrink: 0; min-width: 72px; height: 34px; min-height: 34px; padding: 0 12px;
+  font-size: 12.5px; border-radius: 999px;
+}
+.caliber-name .caliber-design-tag { font-size: 10px; padding: 1px 6px; }
+.caliber-sub { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.caliber-row.is-equipped .small-btn:disabled,
+.caliber-row .small-btn.is-solid {
+  background: transparent; color: var(--accent-focus, #C84B31); border: 1px solid rgba(200, 75, 49, 0.45);
+  box-shadow: none; opacity: 1;
+}
+#atelierCaliberList ~ *, .card-collapse-body > .card-body-actions { margin-top: 0; margin-bottom: 8px; }
+.card-collapse-body > .card-body-actions .text-link-btn { font-size: 12.5px; padding: 4px 0; }
+#btnFlipToBack .movement-wheel { width: 24px; height: 24px; transition: transform 0.6s cubic-bezier(.2,.8,.2,1); }
+#btnFlipToBack:active .movement-wheel, #btnFlipToBack:hover .movement-wheel { transform: rotate(24deg); }
+#btnFlipToBack:active { transform: none; }
+
+/* v1.7.3: subject drop-down as liquid glass */
+.subject-drop {
+  background: linear-gradient(160deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.16) 55%, rgba(255,255,255,0.26) 100%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%) brightness(1.04);
+  backdrop-filter: blur(14px) saturate(180%) brightness(1.04);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.25),
+    inset 1px 0 0 rgba(255, 255, 255, 0.35),
+    0 12px 32px rgba(20, 26, 36, 0.16),
+    0 2px 6px rgba(20, 26, 36, 0.06);
+  border-radius: 18px;
+}
+.subject-drop::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120% 60% at 20% 0%, rgba(255,255,255,0.55), rgba(255,255,255,0) 60%);
+  mix-blend-mode: soft-light;
+}
+.subject-drop.is-open { clip-path: inset(0 0 0 0 round 18px); }
+.subject-drop { clip-path: inset(0 0 100% 0 round 18px); }
+.subject-drop-chips .subject-chip { position: relative; z-index: 1; color: rgba(20, 24, 32, 0.92); }
+.subject-drop-chips .subject-chip:hover { background: rgba(255, 255, 255, 0.35); }
+.subject-drop-chips .subject-chip.is-active { background: rgba(255, 255, 255, 0.5); box-shadow: inset 0 1px 0 rgba(255,255,255,0.8); }
+.subject-drop-manage { position: relative; z-index: 1; border-top-color: rgba(255, 255, 255, 0.5); color: rgba(40, 46, 56, 0.7); }
+#btnFlipToBack { color: var(--ink-muted, #6B7380); opacity: 0.7; }
+#btnFlipToBack .movement-wheel { width: 22px; height: 22px; }
+#btnFlipToBack:hover { opacity: 0.9; }
+#btnFlipToBack { opacity: 0.85; }
+#btnFlipToBack:hover { opacity: 1; }
+
+/* v1.7.3: settings = watch caseback (3D turn) with liquid-glass panels floating over the movement */
+.monolith-face.is-back { position: absolute; isolation: isolate; background: linear-gradient(180deg, #EEF1F5 0%, #DDE2E9 100%); }
+.caseback-art { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
+.caseback-art-inner {
+  position: sticky; top: 64px; margin: 64px 0 0 50%; width: min(104%, 540px); aspect-ratio: 1;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 18px 30px rgba(20, 26, 36, 0.22));
+}
+.caseback-art svg { display: block; }
+.cb-engrave { font-family: var(--font-mono, monospace); font-size: 11.5px; font-weight: 700; letter-spacing: 3.4px; fill: rgba(58, 66, 78, 0.72); }
+/* movement parts are driven from the front watch's own time (app.js syncCaseback) */
+.cb-rot { will-change: transform; }
+.cb-crown { display: none; }
+.caseback-art .cb-crown-n5 { display: inline; }
+.caseback-art[data-caseback="cal-b"] .cb-crown-n2,
+.caseback-art[data-caseback="cal-c"] .cb-crown-c,
+.caseback-art[data-caseback="cal-a"] .cb-crown-f,
+.caseback-art[data-caseback="cal-g"] .cb-crown-f { display: inline; }
+.caseback-art[data-caseback="cal-b"] .cb-crown-n5,
+.caseback-art[data-caseback="cal-c"] .cb-crown-n5,
+.caseback-art[data-caseback="cal-a"] .cb-crown-n5,
+.caseback-art[data-caseback="cal-g"] .cb-crown-n5 { display: none; }
+.pb-engrave { font-family: "Avenir Next", "Futura", "Century Gothic", "Helvetica Neue", var(--font-sans, sans-serif); font-size: 20.5px; font-weight: 500; letter-spacing: 3px; fill: rgba(176, 183, 193, 0.62); stroke: rgba(44, 51, 62, 0.92); stroke-width: 0.8px; paint-order: stroke fill; }
+.pb-engrave-hi { fill: none; stroke: rgba(255, 255, 255, 0.95); stroke-width: 1.1px; }
+.pb-small { font-size: 14px; letter-spacing: 2.4px; }
+.pb-rotor-text { font-family: "Avenir Next", "Futura", "Helvetica Neue", var(--font-sans, sans-serif); font-size: 5.4px; font-weight: 600; letter-spacing: 0.8px; fill: rgba(56, 64, 76, 0.92); }
+.pb-reg { font-family: var(--font-mono, monospace); font-size: 6px; fill: rgba(50, 56, 66, 0.8); }
+.cb-rotor { transform-box: view-box; transform-origin: 50% 50%; }
+.monolith-flipper.is-flipped .cb-rotor { animation: cbRotorSettle 2.8s cubic-bezier(.3,.1,.3,1) 0.25s backwards; }
+@keyframes cbRotorSettle {
+  0% { transform: rotate(110deg); } 28% { transform: rotate(-26deg); } 50% { transform: rotate(15deg); }
+  68% { transform: rotate(-8deg); } 84% { transform: rotate(3deg); } 100% { transform: rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) { .caseback-art * { animation: none !important; } }
+
+.monolith-face.is-back > :not(.caseback-art) { position: relative; z-index: 1; }
+.monolith-face.is-back .card-block,
+.monolith-face.is-back .tab-bar,
+.monolith-face.is-back .kpi-grid > *,
+.monolith-face.is-back .dev-panel {
+  background: linear-gradient(160deg, rgba(255,255,255,0.46) 0%, rgba(255,255,255,0.24) 60%, rgba(255,255,255,0.34) 100%);
+  -webkit-backdrop-filter: blur(9px) saturate(160%);
+  backdrop-filter: blur(9px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 8px 22px rgba(20, 26, 36, 0.10);
+  border-radius: 16px;
+}
+.monolith-face.is-back .cx-footer { text-shadow: 0 1px 0 rgba(255,255,255,0.6); }
+.monolith-face.is-back .caseback-engraving { text-shadow: 0 1px 0 rgba(255,255,255,0.7); }
+
+/* phones: the face swap becomes a real 3D turn of the watch */
+@media (max-width: 860px) {
+  .monolith-scene { perspective: 1400px !important; }
+  .monolith-flipper.is-flipped .monolith-face.is-back { animation: cbTurnIn 0.62s cubic-bezier(0.22, 1, 0.36, 1) backwards; transform-origin: 50% 300px; min-height: calc(100dvh - 190px); }
+  .monolith-flipper.is-flipped .monolith-face.is-back > :not(.caseback-art) { animation: cbGlassIn 0.55s ease 0.75s backwards; }
+  .monolith-flipper:not(.is-flipped) .monolith-face.is-front { animation: cbTurnBack 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; transform-origin: 50% 300px; }
+}
+@keyframes cbTurnIn { from { transform: perspective(1400px) rotateY(-92deg) scale(0.94); opacity: 0.2; } to { transform: perspective(1400px) rotateY(0) scale(1); opacity: 1; } }
+@keyframes cbTurnBack { from { transform: perspective(1400px) rotateY(92deg) scale(0.94); opacity: 0.2; } to { transform: perspective(1400px) rotateY(0) scale(1); opacity: 1; } }
+@keyframes cbGlassIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .monolith-face.is-back, .monolith-face.is-front, .monolith-face.is-back > * { animation: none !important; }
+}
+.caseback-art-inner { max-height: calc(100% - 84px); }
+.caseback-art { overflow: clip; }
+/* wide screens: glass panels also arrive after the caseback has been seen */
+@media (min-width: 861px) {
+  .monolith-flipper.is-flipped .monolith-face.is-back > :not(.caseback-art) { animation: cbGlassIn 0.55s ease 0.75s backwards; }
+}
+.cb-crown { filter: drop-shadow(-1.5px 2.5px 2px rgba(20, 26, 36, 0.35)); }
+/* lighter glass so the moving caseback stays readable through the panels */
+.monolith-face.is-back .card-block,
+.monolith-face.is-back .tab-bar,
+.monolith-face.is-back .kpi-grid > *,
+.monolith-face.is-back .dev-panel {
+  background: linear-gradient(160deg, rgba(255,255,255,0.40) 0%, rgba(255,255,255,0.20) 60%, rgba(255,255,255,0.30) 100%);
+  -webkit-backdrop-filter: blur(4.5px) saturate(150%);
+  backdrop-filter: blur(4.5px) saturate(150%);
+}
+
+/* v1.7.3: settings wheel — steel line-art by default, turns to pale brass when pressed, then the watch flips */
+#btnFlipToBack, #btnFlipToBack:hover, #btnFlipToBack:active, #btnFlipToBack:focus { opacity: 1; color: var(--ink-muted, #6B7380); }
+#btnFlipToBack .mw-line { opacity: 0.75; transition: opacity 0.32s ease; }
+#btnFlipToBack .mw-gold { opacity: 0; transition: opacity 0.32s ease; }
+#btnFlipToBack .movement-wheel { transition: transform 0.6s cubic-bezier(.3,.7,.2,1); }
+#btnFlipToBack:hover .movement-wheel { transform: rotate(24deg); }
+#btnFlipToBack:active .mw-gold, #btnFlipToBack.is-turning .mw-gold { opacity: 1; }
+#btnFlipToBack:active .mw-line, #btnFlipToBack.is-turning .mw-line { opacity: 0; }
+#btnFlipToBack:active .movement-wheel { transform: rotate(60deg); }
+#btnFlipToBack.is-turning .movement-wheel { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) {
+  #btnFlipToBack .mw-line, #btnFlipToBack .mw-gold, #btnFlipToBack .movement-wheel { transition: none; }
+}
+/* rotor hangs with gravity when the phone's motion sensor is available (app.js) */
+.cb-rotor-pivot { transform-box: view-box; transform-origin: 50% 50%; }
+.caseback-art.has-gravity .cb-rotor { animation: none !important; }
+
+/* v1.7.3: phones — one continuous 180deg turn (face turns away to 90deg, the other face turns in from 90deg) */
+@media (max-width: 860px) {
+  .monolith-flipper.is-flip-out:not(.is-flipped) .monolith-face.is-front { animation: cbTurnOutA 0.3s cubic-bezier(.45,0,.85,.45) forwards !important; transform-origin: 50% 300px; }
+  .monolith-flipper.is-flip-out.is-flipped .monolith-face.is-back { animation: cbTurnOutB 0.3s cubic-bezier(.45,0,.85,.45) forwards !important; transform-origin: 50% 300px; }
+  .monolith-flipper.is-flipped .monolith-face.is-back { animation: cbTurnIn 0.44s cubic-bezier(0,0,.35,1) backwards; }
+  .monolith-flipper:not(.is-flipped) .monolith-face.is-front { animation: cbTurnBack 0.44s cubic-bezier(0,0,.35,1) backwards; }
+  .monolith-flipper.is-flipped .monolith-face.is-back > :not(.caseback-art) { animation: cbGlassIn 0.5s ease 0.6s backwards; }
+}
+@keyframes cbTurnOutA { from { transform: perspective(1400px) rotateY(0deg); } to { transform: perspective(1400px) rotateY(90deg); } }
+@keyframes cbTurnOutB { from { transform: perspective(1400px) rotateY(0deg); } to { transform: perspective(1400px) rotateY(-90deg); } }
+@keyframes cbTurnIn { from { transform: perspective(1400px) rotateY(-90deg); } to { transform: perspective(1400px) rotateY(0deg); } }
+@keyframes cbTurnBack { from { transform: perspective(1400px) rotateY(90deg); } to { transform: perspective(1400px) rotateY(0deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .monolith-flipper.is-flip-out .monolith-face { animation: none !important; }
+}
+
+/* v1.7.3: caseback peek — swipe the watch sideways to look at the back (no settings panels) */
+.satellite-mount { touch-action: pan-y; }
+.monolith-flipper.is-peek .monolith-face.is-back > :not(.caseback-art) { display: none !important; }
+.monolith-flipper.is-peek .monolith-face.is-back { background: transparent !important; border-color: transparent !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; touch-action: pan-y; cursor: grab; }
+.monolith-flipper.is-peek .caseback-art-inner { top: 96px; margin-top: 96px; }
+@media (max-width: 860px) {
+  .monolith-flipper.turn-rev.is-flip-out:not(.is-flipped) .monolith-face.is-front { animation-name: cbTurnOutB !important; }
+  .monolith-flipper.turn-rev.is-flip-out.is-flipped .monolith-face.is-back { animation-name: cbTurnOutA !important; }
+  .monolith-flipper.turn-rev.is-flipped .monolith-face.is-back { animation-name: cbTurnBack; }
+  .monolith-flipper.turn-rev:not(.is-flipped) .monolith-face.is-front { animation-name: cbTurnIn; }
 }

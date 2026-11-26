@@ -19,7 +19,8 @@
     alarmType: 'gong',      // 'gong' | 'chime' | 'silent'
     tickVol: 0,             // 0..1 (4Hz mechanical escapement ASMR)
     rainVol: 0,             // 0..1
-    cafeVol: 0              // 0..1
+    cafeVol: 0,             // 0..1
+    ambienceActive: true    // v1.7.3: white noise plays only while a timer is running (app gates this)
   };
 
   function ensureContext() {
@@ -200,7 +201,7 @@
   }
 
   function syncEscapementLoop() {
-    const shouldRun = !settings.mannerMode && settings.tickVol > 0.005;
+    const shouldRun = !settings.mannerMode && settings.ambienceActive !== false && settings.tickVol > 0.005;
     if (shouldRun && !tickTimer) {
       ensureContext();
       tickTimer = setInterval(emitEscapementBeat, 125); // 8 Hz (4 Hz double-beat)
@@ -211,7 +212,7 @@
   }
 
   function syncAmbientChannel(kind, vol) {
-    const effective = settings.mannerMode ? 0 : vol;
+    const effective = (settings.mannerMode || settings.ambienceActive === false) ? 0 : vol;
     if (effective <= 0.005) {
       if (kind === 'rain' && rainNode) {
         try { rainNode.stop(); } catch (e) {}

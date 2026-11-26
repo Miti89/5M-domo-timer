@@ -64,6 +64,12 @@
   let lastDrumWheelMs = 0;
   let lastLockedCrownToastMs = 0;
   let deckFlipped = false;
+  let deckFlipTimer = 0;
+  const casebackArtEl = document.getElementById('casebackArt');
+  let casebackBalT = 0;
+  let casebackLastPerf = 0;
+  let casebackLastKey = '';
+  let casebackParts = null;
   let atelierTapCount = 0;
   let lastAtelierTapMs = 0;
   let lastTitleText = '';
@@ -925,15 +931,27 @@
     if (dom.btnQuickTime) dom.btnQuickTime.setAttribute('aria-expanded', 'false');
   }
 
+  // v1.7.3: subject picker drops down right under the tag instead of opening a sheet
+  let subjectDropTimer = 0;
   function openSubjectSheet() {
+    if (!dom.subjectSheet) return;
+    if (!dom.subjectSheet.hidden && dom.subjectSheet.classList.contains('is-open')) { closeSubjectSheet(); return; }
     renderSubjects();
-    if (dom.subjectSheet) dom.subjectSheet.hidden = false;
+    clearTimeout(subjectDropTimer);
+    dom.subjectSheet.hidden = false;
+    void dom.subjectSheet.offsetHeight;
+    dom.subjectSheet.classList.add('is-open');
     if (dom.frontSubjectTag) dom.frontSubjectTag.setAttribute('aria-expanded', 'true');
   }
 
   function closeSubjectSheet() {
-    if (dom.subjectSheet) dom.subjectSheet.hidden = true;
+    if (!dom.subjectSheet) return;
+    dom.subjectSheet.classList.remove('is-open');
     if (dom.frontSubjectTag) dom.frontSubjectTag.setAttribute('aria-expanded', 'false');
+    clearTimeout(subjectDropTimer);
+    subjectDropTimer = setTimeout(function () {
+      if (!dom.subjectSheet.classList.contains('is-open')) dom.subjectSheet.hidden = true;
+    }, 260);
   }
 
   function isAnyModalOpen() {
@@ -945,8 +963,7 @@
       (dom.guideModal && !dom.guideModal.hidden) ||
       (dom.reflectionModal && !dom.reflectionModal.hidden) ||
       (dom.stopwatchReviewModal && !dom.stopwatchReviewModal.hidden) ||
-      (dom.quickTimeSheet && !dom.quickTimeSheet.hidden) ||
-      (dom.subjectSheet && !dom.subjectSheet.hidden)
+      (dom.quickTimeSheet && !dom.quickTimeSheet.hidden)
     );
   }
 
@@ -1022,7 +1039,7 @@
     if (dom.btnMusicToggleDetail) {
       dom.btnMusicToggleDetail.classList.toggle('is-active', musicDetailOpen);
       dom.btnMusicToggleDetail.setAttribute('aria-expanded', String(musicDetailOpen));
-      dom.btnMusicToggleDetail.textContent = musicDetailOpen ? '닫기' : '상세';
+      dom.btnMusicToggleDetail.textContent = '목록';
     }
   }
 
@@ -1041,7 +1058,11 @@
       dom.musicLiveDot.classList.toggle('is-idle', !activeMusic);
     }
     if (dom.musicNowTitle) {
-      dom.musicNowTitle.textContent = activeMusic ? activeMusic.title : '재생할 음악을 선택하세요';
+      const nowTitle = activeMusic ? (activeMusic.trackTitle || activeMusic.title) : '재생할 음악을 선택하세요';
+      dom.musicNowTitle.textContent = nowTitle;
+      dom.musicNowTitle.title = activeMusic && activeMusic.trackTitle
+        ? (activeMusic.trackTitle + (activeMusic.trackAuthor ? ' · ' + activeMusic.trackAuthor : '') + ' — ' + activeMusic.title)
+        : nowTitle;
     }
     if (dom.musicTypeBadge) {
       if (!activeMusic) {
@@ -1053,7 +1074,8 @@
       }
     }
     if (dom.btnMusicPlayPause) {
-      dom.btnMusicPlayPause.textContent = (activeMusic && musicPlaying) ? '정지' : '재생';
+      dom.btnMusicPlayPause.textContent = (activeMusic && musicPlaying) ? '❚❚' : '▶';
+      dom.btnMusicPlayPause.setAttribute('aria-label', (activeMusic && musicPlaying) ? '일시정지' : '재생');
     }
     if (dom.btnMusicMute) {
       dom.btnMusicMute.classList.toggle('is-active', effectivelyMuted);
@@ -1124,6 +1146,7 @@
     if (dom.musicPlayerDock) dom.musicPlayerDock.hidden = false;
     if (dom.musicIframe) {
       dom.musicIframe.src = embedUrl;
+      startYouTubeTitleWatch();
     }
 
     renderMusicPresets();
@@ -1131,6 +1154,39 @@
     showToast(isFileProto ? '로컬 파일 실행 중 — YT↗ 팝업으로 열면 바로 재생됩니다' : `[${title}] 불러옴`);
     return true;
   }
+
+  // v1.7.3: show the title of the track YouTube is actually playing (from the embed's infoDelivery messages)
+  let ytHandshakeTimer = null;
+  function startYouTubeTitleWatch() {
+    if (!dom.musicIframe || !window.ChronoMusic || typeof window.ChronoMusic.sendListeningHandshake !== 'function') return;
+    if (ytHandshakeTimer) clearInterval(ytHandshakeTimer);
+    let tries = 0;
+    const ping = function () {
+      tries++;
+      window.ChronoMusic.sendListeningHandshake(dom.musicIframe);
+      if (tries > 20 || (activeMusic && activeMusic.trackTitle)) {
+        clearInterval(ytHandshakeTimer);
+        ytHandshakeTimer = null;
+      }
+    };
+    dom.musicIframe.addEventListener('load', function onLoad() {
+      dom.musicIframe.removeEventListener('load', onLoad);
+      ping();
+    });
+    ytHandshakeTimer = setInterval(ping, 1000);
+  }
+
+  window.addEventListener('message', function (ev) {
+    if (!activeMusic || !window.ChronoMusic || typeof window.ChronoMusic.parseYouTubeInfoMessage !== 'function') return;
+    if (dom.musicIframe && ev.source && ev.source !== dom.musicIframe.contentWindow) return;
+    const info = window.ChronoMusic.parseYouTubeInfoMessage(ev.data, ev.origin);
+    if (!info || !info.title) return;
+    if (info.title !== activeMusic.trackTitle) {
+      activeMusic.trackTitle = info.title;
+      activeMusic.trackAuthor = info.author || '';
+      syncMusicControlsUI();
+    }
+  });
 
   function unloadMusicTrack() {
     activeMusic = null;
@@ -1551,6 +1607,7 @@
 
     if (mountedCaliberId !== targetId && engineObj) {
       mountedCaliberId = targetId;
+      if (typeof syncCasebackCaliber === 'function') syncCasebackCaliber(targetId);
       satellite = engineObj.mount(dom.satelliteMount, watchCallbacks);
       const meta = CALIBER_META[targetId] || CALIBER_META['cal-e'];
       if (dom.brandTitle) {
@@ -1915,7 +1972,7 @@
     // Keep mounted watch in lockstep with unlocked state
     mountActiveCaliber(snap.activeWatch, 'steel');
 
-    if (dom.frontAtelierDot) dom.frontAtelierDot.hidden = !snap.hasActionablePart;
+    if (dom.frontAtelierDot) dom.frontAtelierDot.hidden = true; // v1.7.3: 앞면 설정 버튼의 빨간 점은 표시하지 않음
     if (dom.tabAtelierDot) dom.tabAtelierDot.hidden = !snap.hasActionablePart;
     if (dom.devModeBadge) dom.devModeBadge.hidden = !snap.devMode;
     if (dom.atelierDevStrip) dom.atelierDevStrip.hidden = !snap.devMode;
@@ -1944,15 +2001,15 @@
 
     if (dom.atelierNextPartLabel && dom.atelierNextPartPct && dom.atelierBarFill) {
       if (snap.allProjectsComplete) {
-        dom.atelierNextPartLabel.textContent = 'NO.1~NO.10 모든 공방 칼리버 조립 완료!';
+        dom.atelierNextPartLabel.textContent = '모든 칼리버 조립 완료';
         dom.atelierNextPartPct.textContent = '100%';
         dom.atelierBarFill.style.width = '100%';
       } else if (snap.readyPart) {
-        dom.atelierNextPartLabel.textContent = `${proj.name} · ${snap.readyPart.code} ${snap.readyPart.name} 가공 완료!`;
+        dom.atelierNextPartLabel.textContent = `${snap.readyPart.name} 가공 완료`;
         dom.atelierNextPartPct.textContent = '조립 가능';
         dom.atelierBarFill.style.width = '100%';
       } else if (snap.machiningPart) {
-        dom.atelierNextPartLabel.textContent = `${snap.machiningPart.code} ${snap.machiningPart.name} 가공 중`;
+        dom.atelierNextPartLabel.textContent = `${snap.machiningPart.name} 가공 중`;
         dom.atelierNextPartPct.textContent = `${snap.machiningPart.pct}%`;
         dom.atelierBarFill.style.width = `${snap.machiningPart.pct}%`;
       }
@@ -1962,7 +2019,7 @@
       dom.atelierPartsGrid.innerHTML = snap.parts.map(function (p) {
         const badge = p.status === 'assembled'
           ? '완료'
-          : (p.status === 'ready' ? '조립!' : `${p.pct}%`);
+          : (p.status === 'ready' ? '조립 가능' : `${p.pct}%`);
         return [
           `<div class="atelier-part-chip is-${p.status}" title="${escapeHtml(p.desc)} (목표 누적 ${fmt(p.cumMinutes)})">`,
           `  <span class="part-code">${escapeHtml(p.code)}</span>`,
@@ -1991,11 +2048,11 @@
       } else if (snap.readyPart) {
         dom.btnAssemblePart.disabled = false;
         dom.btnAssemblePart.classList.add('is-ready');
-        dom.btnAssemblePart.textContent = `${proj.name} · ${snap.readyPart.code} ${snap.readyPart.name} 조립하기`;
+        dom.btnAssemblePart.textContent = `${snap.readyPart.name} 조립하기`;
       } else if (snap.machiningPart) {
         dom.btnAssemblePart.disabled = true;
         dom.btnAssemblePart.classList.remove('is-ready');
-        dom.btnAssemblePart.textContent = `${snap.machiningPart.code} ${snap.machiningPart.name} 가공 중 (${fmt(snap.machiningPart.remainingMinutes)} 남음)`;
+        dom.btnAssemblePart.textContent = `${snap.machiningPart.name} 가공 중 (${fmt(snap.machiningPart.remainingMinutes)} 남음)`;
       }
     }
 
@@ -2062,9 +2119,9 @@
         return [
           '<div class="caliber-item">',
           `  <div class="caliber-row${c.active ? ' is-equipped' : ''}${c.unlocked ? ' is-unlocked' : ' is-locked'}${c.playable ? ' is-playable' : ' is-concept'}${c.inDesign ? ' is-in-design' : ''}" data-action="toggle-codex-story" data-caliber="${escapeHtml(c.id)}" aria-expanded="${String(isExpanded)}">`,
-          `    <span class="caliber-letter-badge${c.active ? ' is-active' : (c.playable ? ' is-playable' : '')}" aria-hidden="true">${escapeHtml(c.num || c.letter)}</span>`,
           '    <div class="caliber-info">',
-          `      <div class="caliber-name">${escapeHtml(c.name)} <span class="caliber-ko">${escapeHtml(c.korean)}</span>${designTag}</div>`,
+          `      <span class="caliber-letter-badge${c.active ? ' is-active' : (c.playable ? ' is-playable' : '')}" aria-hidden="true">${escapeHtml(c.num ? 'NO.' + parseInt(c.num, 10) : c.letter)}</span>`,
+          `      <div class="caliber-name">${escapeHtml(String(c.name).replace(/^NO\.\s*\d+\s*/i, ''))}${designTag}</div>`,
           `      <div class="caliber-sub">${escapeHtml(c.subtitle)}</div>`,
           '    </div>',
           `    <button type="button" class="small-btn${c.active ? ' is-solid' : ''}" data-action="select-caliber" data-caliber="${escapeHtml(c.id)}"${disabledAttr}>${escapeHtml(stateText)}</button>`,
@@ -2109,7 +2166,7 @@
       const fmt = window.CasperAtelier.formatMinutesShortKo;
       let rewardHtml = '';
       if (snap.readyPart) {
-        rewardHtml = `<strong>+${formatMinutesKo(logEntry.minutes)} 공방 반영</strong> · <span>${escapeHtml(snap.activeProject.name)} ${escapeHtml(snap.readyPart.code)} ${escapeHtml(snap.readyPart.name)} 가공 완료! 뒷면 공방에서 조립하세요</span>`;
+        rewardHtml = `<strong>+${formatMinutesKo(logEntry.minutes)} 공방 반영</strong> · <span>${escapeHtml(snap.readyPart.name)} 가공 완료 · 공방에서 조립하기</span>`;
       } else if (snap.machiningPart) {
         rewardHtml = `<strong>+${formatMinutesKo(logEntry.minutes)} 공방 반영</strong> · <span>${escapeHtml(snap.activeProject.name)} ${escapeHtml(snap.machiningPart.code)} ${escapeHtml(snap.machiningPart.name)} ${snap.machiningPart.pct}% (${fmt(snap.machiningPart.remainingMinutes)} 남음)</span>`;
       } else if (snap.allProjectsComplete) {
@@ -2274,11 +2331,41 @@
     const next = Boolean(flipped);
     if (next === deckFlipped) return;
     deckFlipped = next;
+    if (next) {
+      if (!casebackPeekPending) setCasebackPeek(false, 1);
+      casebackPeekPending = false;
+    }
     if (dom.monolithFlipper) {
-      dom.monolithFlipper.classList.toggle('is-flipped', deckFlipped);
+      // v1.7.3: on phones the visible face first turns away to 90deg, then the other face turns in,
+      // so the watch reads as one continuous 180deg turn.
+      const flipper = dom.monolithFlipper;
+      const wantFlipped = deckFlipped;
+      clearTimeout(deckFlipTimer);
+      const phone = window.matchMedia && window.matchMedia('(max-width: 860px)').matches;
+      const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (phone && !reduceMotion && !silent && !flipper.classList.contains('is-flip-out')) {
+        flipper.classList.add('is-flip-out');
+        deckFlipTimer = setTimeout(function () {
+          flipper.classList.remove('is-flip-out');
+          flipper.classList.toggle('is-flipped', deckFlipped);
+        }, 300);
+      } else {
+        flipper.classList.remove('is-flip-out');
+        flipper.classList.toggle('is-flipped', wantFlipped);
+      }
     }
     if (dom.backControlDeck) {
       dom.backControlDeck.setAttribute('aria-hidden', String(!deckFlipped));
+    }
+    const gearBtn = document.getElementById('btnFlipToBack');
+    if (gearBtn) {
+      if (deckFlipped) {
+        setTimeout(function () { if (deckFlipped) gearBtn.classList.add('is-turning'); }, 0);
+      } else {
+        // coming back: brass fades to steel again once the front is visible
+        gearBtn.classList.add('is-turning');
+        setTimeout(function () { if (!deckFlipped) gearBtn.classList.remove('is-turning'); }, 760);
+      }
     }
     if (deckFlipped) {
       markFeatureHintSeen('deck');
@@ -2445,9 +2532,9 @@
     if (dom.valTick) dom.valTick.textContent = `${t}%`;
     if (dom.valRain) dom.valRain.textContent = `${r}%`;
     if (dom.valCafe) dom.valCafe.textContent = `${c}%`;
-    if (dom.btnQuickTick) dom.btnQuickTick.classList.toggle('is-on', t > 0);
-    if (dom.btnQuickRain) dom.btnQuickRain.classList.toggle('is-on', r > 0);
-    if (dom.btnQuickCafe) dom.btnQuickCafe.classList.toggle('is-on', c > 0);
+    if (dom.btnQuickTick) { dom.btnQuickTick.classList.toggle('is-on', t > 0); dom.btnQuickTick.setAttribute('aria-pressed', String(t > 0)); }
+    if (dom.btnQuickRain) { dom.btnQuickRain.classList.toggle('is-on', r > 0); dom.btnQuickRain.setAttribute('aria-pressed', String(r > 0)); }
+    if (dom.btnQuickCafe) { dom.btnQuickCafe.classList.toggle('is-on', c > 0); dom.btnQuickCafe.setAttribute('aria-pressed', String(c > 0)); }
     window.ChronoAudio.updateSettings({
       tickVol: t / 100,
       rainVol: r / 100,
@@ -2461,9 +2548,10 @@
       closeQuickTimeSheet();
       return;
     }
-    if (e.target === dom.subjectSheet) {
+    if (dom.subjectSheet && dom.subjectSheet.classList.contains('is-open') &&
+        !dom.subjectSheet.contains(e.target) &&
+        !(dom.frontSubjectTag && dom.frontSubjectTag.contains(e.target))) {
       closeSubjectSheet();
-      return;
     }
     if (e.target === dom.guideModal) {
       closeGuideModal();
@@ -2598,7 +2686,17 @@
       }
 
       case 'flip-deck':
-        setDeckFlipped(!deckFlipped, false);
+        if (!deckFlipped && target && target.id === 'btnFlipToBack') {
+          // v1.7.3: the steel wheel turns to brass first, then the watch flips over
+          if (target.classList.contains('is-turning')) break;
+          startCasebackMotion();
+          const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          if (reduce) { setDeckFlipped(true, false); break; }
+          target.classList.add('is-turning');
+          setTimeout(function () { setDeckFlipped(true, false); }, 280);
+        } else {
+          setDeckFlipped(!deckFlipped, false);
+        }
         break;
 
       case 'switch-tab': {
@@ -2761,7 +2859,7 @@
         atelierState = window.ChronoStorage.saveAtelier(res.state);
         if (dom.atelierStoryFeedback && res.assembledPart && res.assembledPart.story) {
           dom.atelierStoryFeedback.innerHTML = [
-            `<div class="atelier-story-feedback-meta">${escapeHtml(res.assembledPart.code)} ${escapeHtml(res.assembledPart.name)} · 조립 완료</div>`,
+            `<div class="atelier-story-feedback-meta">${escapeHtml(res.assembledPart.name)} 조립 완료</div>`,
             `<div class="atelier-story-feedback-quote">“${escapeHtml(res.assembledPart.story)}”</div>`
           ].join('');
           dom.atelierStoryFeedback.hidden = false;
@@ -2781,7 +2879,7 @@
         } else {
           window.ChronoAudio.playCrownPull(true);
           const storyPreview = res.assembledPart.story ? ` — ${res.assembledPart.story}` : '';
-          showToast(`${res.assembledPart.code} ${res.assembledPart.name} 조립 완료!${storyPreview}`, 3800);
+          showToast(`${res.assembledPart.name} 조립 완료${storyPreview}`, 3800);
         }
         renderAtelier();
         break;
@@ -3078,8 +3176,9 @@
           const cur = Number(slider.value) || 0;
           slider.value = cur > 0 ? '0' : '40';
           syncMixerUI();
-          const labels = { tick: '4Hz 탈진기 ASMR', rain: '빗소리', cafe: '카페 앰비언스' };
-          showToast(`${labels[ch] || ch} ${cur > 0 ? '꺼짐' : '40% 켜짐'}`);
+          const labels = { tick: '시계 초침 소리', rain: '빗소리', cafe: '카페' };
+          const idleNote = (cur > 0 || (timer.state.running && timer.state.mode !== 'clock')) ? '' : ' · 타이머가 돌 때 재생';
+          showToast(`${labels[ch] || ch} ${cur > 0 ? '꺼짐' : '켜짐'}${idleNote}`);
         }
         break;
       }
@@ -3276,6 +3375,20 @@
     }
   });
 
+  // v1.7.3: white noise plays only while a pomodoro/countdown/stopwatch is actually running
+  let lastAmbienceActive = null;
+  function syncAmbienceGate() {
+    const active = Boolean(timer.state.running) && timer.state.mode !== 'clock';
+    if (active === lastAmbienceActive) return;
+    lastAmbienceActive = active;
+    document.body.classList.toggle('is-timer-running', active);
+    window.ChronoAudio.updateSettings({ ambienceActive: active });
+    const hint = document.getElementById('dockNoiseHint');
+    if (hint) hint.textContent = active ? '재생 중' : '타이머 중에만';
+  }
+  syncAmbienceGate();
+  setInterval(syncAmbienceGate, 400);
+
   if (dom.importFileInput) {
     dom.importFileInput.addEventListener('change', function () {
       const file = dom.importFileInput.files && dom.importFileInput.files[0];
@@ -3450,6 +3563,166 @@
     }
   });
 
+  // v1.7.3: the caseback movement runs off the same snapshot as the front watch,
+  // so it turns, reverses and stops exactly when the front movement does.
+  function syncCaseback(snap, nowPerf) {
+    if (!casebackArtEl || !snap) return;
+    const dt = casebackLastPerf ? Math.min(100, Math.max(0, nowPerf - casebackLastPerf)) : 0;
+    casebackLastPerf = nowPerf;
+    if (!deckFlipped) return;
+    stepCasebackRotor(dt);
+    const isTimerMode = snap.mode === 'pomodoro' || snap.mode === 'countdown' || snap.mode === 'stopwatch';
+    const hours = isTimerMode && typeof snap.rawHours === 'number' ? snap.rawHours : (Number(snap.tHours) || 0);
+    const minutes = hours * 60;
+    const sec = Number(snap.secondsSweep) || 0;
+    if (snap.running) casebackBalT += dt;
+    const bal = 46 * Math.sin(casebackBalT * 0.001 * Math.PI * 2 * 3);
+    const key = sec.toFixed(3) + '|' + minutes.toFixed(3) + '|' + bal.toFixed(1);
+    if (key === casebackLastKey) return;
+    casebackLastKey = key;
+    if (!casebackParts) {
+      casebackParts = {};
+      ['sec', 'esc', 'bal', 'center', 'third', 'barrel'].forEach(function (k) {
+        casebackParts[k] = Array.prototype.slice.call(casebackArtEl.querySelectorAll('.cb-' + k));
+      });
+    }
+    const setRot = function (k, deg) {
+      const list = casebackParts[k];
+      for (let i = 0; i < list.length; i++) list[i].style.transform = 'rotate(' + deg + 'deg)';
+    };
+    setRot('sec', (sec * 6).toFixed(2));
+    setRot('esc', String(-Math.round(sec * 8) * 12));
+    setRot('bal', bal.toFixed(1));
+    setRot('center', (minutes * 6).toFixed(2));
+    setRot('third', (-minutes * 48).toFixed(2));
+    setRot('barrel', (-minutes * 0.75).toFixed(2));
+  }
+
+  // v1.7.3: the automatic rotor swings to hang toward the ground, driven by the phone's motion sensor.
+  // Mass side of the rotor points at 215deg (screen coords) when the pivot rotation is 0.
+  const CB_ROTOR_MASS_DEG = 220;
+  const cbGravity = { x: 0, y: 0, ok: false };
+  let cbRotorAngle = 0;
+  let cbRotorVel = 0;
+  let cbRotorEl = null;
+  let cbMotionAsked = false;
+  function onCasebackMotion(e) {
+    const g = e && e.accelerationIncludingGravity;
+    if (!g || g.x === null || g.y === null) return;
+    let gx = Number(g.x) || 0;
+    let gy = Number(g.y) || 0;
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) { gx = -gx; gy = -gy; }
+    const ang = (screen.orientation && typeof screen.orientation.angle === 'number')
+      ? screen.orientation.angle
+      : (typeof window.orientation === 'number' ? window.orientation : 0);
+    const r = -ang * Math.PI / 180;
+    // device frame: x right, y up the screen. Rotate into the current screen frame.
+    const sx = gx * Math.cos(r) - gy * Math.sin(r);
+    const sy = gx * Math.sin(r) + gy * Math.cos(r);
+    // "down" in screen coordinates (y grows downward) is opposite the reaction vector
+    cbGravity.x = -sx;
+    cbGravity.y = sy;
+    if (!cbGravity.ok) {
+      cbGravity.ok = true;
+      if (casebackArtEl) casebackArtEl.classList.add('has-gravity');
+    }
+  }
+  function startCasebackMotion() {
+    if (cbMotionAsked || typeof window.DeviceMotionEvent === 'undefined') return;
+    cbMotionAsked = true;
+    const listen = function () { window.addEventListener('devicemotion', onCasebackMotion); };
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS && typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission().then(function (res) { if (res === 'granted') listen(); }).catch(function () {});
+    } else {
+      listen();
+    }
+  }
+  function stepCasebackRotor(dtMs) {
+    if (!cbGravity.ok || !casebackArtEl) return;
+    if (!cbRotorEl) cbRotorEl = casebackArtEl.querySelector('.cb-rotor-pivot');
+    if (!cbRotorEl) return;
+    const dt = Math.min(0.05, Math.max(0, dtMs / 1000));
+    if (!dt) return;
+    const mag = Math.hypot(cbGravity.x, cbGravity.y);
+    const target = Math.atan2(cbGravity.y, cbGravity.x);
+    const mass = (CB_ROTOR_MASS_DEG + cbRotorAngle) * Math.PI / 180;
+    // pendulum: pull toward gravity in proportion to how upright the phone is, with bearing friction
+    const pull = 90 * Math.min(1, mag / 9.8) * Math.sin(target - mass);
+    const acc = pull - 2.4 * cbRotorVel;
+    cbRotorVel += acc * dt;
+    cbRotorAngle += cbRotorVel * dt * 180 / Math.PI;
+    cbRotorAngle = ((cbRotorAngle % 360) + 360) % 360;
+    cbRotorEl.style.transform = 'rotate(' + cbRotorAngle.toFixed(2) + 'deg)';
+  }
+
+  if (typeof window.DeviceMotionEvent !== 'undefined' &&
+      !(/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))) {
+    startCasebackMotion();
+  }
+
+  // v1.7.3: swipe the watch sideways on the main screen to turn it over and look at the caseback
+  // (caseback only, no settings panels). Swipe again or tap to turn it back.
+  var casebackPeek = false;
+  var casebackPeekPending = false;
+  function setCasebackPeek(on, dir) {
+    casebackPeek = Boolean(on);
+    const flipper = dom.monolithFlipper;
+    if (!flipper) return;
+    flipper.classList.toggle('is-peek', casebackPeek);
+    flipper.classList.toggle('turn-rev', dir < 0);
+  }
+  function bindSwipe(el, onSwipe, onTap) {
+    if (!el) return;
+    let sx = 0, sy = 0, st = 0, id = null;
+    el.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      id = e.pointerId; sx = e.clientX; sy = e.clientY; st = Date.now();
+    }, true);
+    el.addEventListener('pointerup', function (e) {
+      if (id !== e.pointerId) return;
+      id = null;
+      const dx = e.clientX - sx, dy = e.clientY - sy, t = Date.now() - st;
+      if (Math.abs(dx) >= 56 && Math.abs(dx) > Math.abs(dy) * 1.5 && t < 900) onSwipe(dx > 0 ? 1 : -1);
+      else if (onTap && Math.abs(dx) < 8 && Math.abs(dy) < 8 && t < 400) onTap();
+    }, true);
+    el.addEventListener('pointercancel', function () { id = null; }, true);
+  }
+  bindSwipe(document.querySelector('.watch-frame .satellite-mount'), function (dir) {
+    if (deckFlipped || isAnyModalOpen() || document.body.classList.contains('is-standby')) return;
+    if (satellite && satellite.isCrownPulled && satellite.isCrownPulled()) return;
+    startCasebackMotion();
+    setCasebackPeek(true, dir);
+    casebackPeekPending = true;
+    setDeckFlipped(true, false);
+  });
+  bindSwipe(dom.backControlDeck, function (dir) {
+    if (!deckFlipped || !casebackPeek) return;
+    dom.monolithFlipper.classList.toggle('turn-rev', dir < 0);
+    setDeckFlipped(false, false);
+  }, function () {
+    if (deckFlipped && casebackPeek) setDeckFlipped(false, false);
+  });
+
+  function syncCasebackCaliber(caliberId) {
+    if (!casebackArtEl) return;
+    casebackArtEl.setAttribute('data-caseback', caliberId);
+    const meta = CALIBER_META[caliberId];
+    if (!meta) return;
+    const title = String(meta.title).replace(/\s*\(.*\)\s*$/, '');
+    const m = /^NO\.(\d+)\s+(.*)$/.exec(title);
+    const num = m ? m[1] : '5';
+    const name = m ? m[2] : title;
+    const put = function (cls, text) {
+      const list = casebackArtEl.querySelectorAll(cls);
+      for (let i = 0; i < list.length; i++) list[i].textContent = text;
+    };
+    put('.pb-t-no', 'NO.' + num);
+    put('.pb-t-name', name);
+    put('.pb-t-serial', 'C0' + num + '-00001');
+    put('.pb-t-cal', 'C0' + num);
+  }
+
   // Main Animation Loop (foreground 60fps) + 1s background heartbeat
   function renderFrame(nowPerf) {
     const dt = Math.min(100, Math.max(0, nowPerf - lastPerfMs));
@@ -3465,6 +3738,7 @@
 
     const snap = timer.getDialSnapshot(nowMs, demoActive ? demoEpochMs : undefined);
     if (satellite) satellite.render(snap, nowPerf);
+    syncCaseback(snap, nowPerf);
 
     if (dom.digitalReadout && snap.digitalText !== lastDigitalText) {
       lastDigitalText = snap.digitalText;

@@ -835,6 +835,22 @@
   const ciSrc = readProjectFile('casper-info.js');
   assert(!/@[a-z0-9.-]+\.[a-z]{2,}/i.test(ciSrc), 'No contact e-mail address in footer notices');
 
+  // 18. v1.7.3 — Current YouTube track title from embed infoDelivery messages
+  assert(typeof CM.parseYouTubeInfoMessage === 'function', 'ChronoMusic.parseYouTubeInfoMessage is exported');
+  const ytInfo = CM.parseYouTubeInfoMessage(JSON.stringify({ event: 'infoDelivery', info: { videoData: { title: ' Lofi Track ', author: 'Lofi Girl' }, playerState: 1 } }), 'https://www.youtube.com');
+  assert(ytInfo && ytInfo.title === 'Lofi Track' && ytInfo.author === 'Lofi Girl' && ytInfo.playerState === 1, 'infoDelivery message yields trimmed title, author and player state');
+  assert(CM.parseYouTubeInfoMessage(JSON.stringify({ event: 'infoDelivery', info: { videoData: { title: 'X' } } }), 'https://evil.example') === null, 'Messages from non-YouTube origins are ignored');
+  assert(CM.parseYouTubeInfoMessage('not json', 'https://www.youtube.com') === null, 'Non-JSON messages are ignored');
+  assert(CM.parseYouTubeInfoMessage({ event: 'onReady' }, 'https://www.youtube-nocookie.com') === null, 'Unrelated YouTube events are ignored');
+  assert(typeof CM.sendListeningHandshake === 'function' && CM.sendListeningHandshake(null) === false, 'sendListeningHandshake is safe without an iframe');
+
+  // 19. v1.7.3 — White noise settings: renamed card, dock sliders, timer-gated playback
+  assert(htmlSrc.indexOf('오프라인 자체 합성') === -1, 'Sound tab no longer mentions "오프라인 자체 합성"');
+  assert(htmlSrc.indexOf('화이트 노이즈 설정') !== -1, 'Sound mixer card is titled "화이트 노이즈 설정"');
+  assert(['btnQuickTick', 'btnQuickRain', 'btnQuickCafe'].every(function (id) { return htmlSrc.indexOf('id="' + id + '"') !== -1; }) && htmlSrc.indexOf('class="dock-noise"') !== -1, 'Music dock contains white noise on/off chips');
+  const audioSrc = readProjectFile('audio-engine.js');
+  assert(/ambienceActive/.test(audioSrc) && /settings\.ambienceActive === false\) \? 0/.test(audioSrc), 'Audio engine silences white noise when ambienceActive is false');
+
   logLine('TEST SUMMARY: ' + passed + ' passed, ' + failed + ' failed');
   if (failed > 0) {
     if (typeof process !== 'undefined' && process && typeof process.exit === 'function') {

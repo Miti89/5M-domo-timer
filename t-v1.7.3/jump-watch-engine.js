@@ -577,7 +577,6 @@
          ' L ' + (SX + 16) + ',' + (SY + 18) + ' L ' + (SX - 16) + ',' + (SY + 18) + ' Z',
       fill: '#D8DDE4', stroke: '#4A515C', 'stroke-width': '0.65', opacity: '0.92'
     }));
-    secClipG.appendChild(createSvgEl('circle', { cx: SX - 7.8, cy: SY + 3.2, r: '1.6', fill: '#1A1F27', stroke: '#9BA3AE', 'stroke-width': '0.45' }));
     // Subtle dark cylindrical index notch at upper-right wall
     secClipG.appendChild(createSvgEl('polygon', {
       points: (SX + 2.0) + ',' + (SY - 2.0) + ' ' + (SX + 5.8) + ',' + (SY - 5.2) + ' ' + (SX + 3.8) + ',' + (SY - 6.6),

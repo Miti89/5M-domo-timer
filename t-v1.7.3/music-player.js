@@ -175,6 +175,38 @@
     }
   }
 
+  /**
+   * v1.7.3: Parse a message posted by the YouTube embed (enablejsapi=1) and pull out
+   * the currently playing track title / player state. Returns null for unrelated messages.
+   */
+  function parseYouTubeInfoMessage(data, origin) {
+    if (origin && !/^https:\/\/(www\.)?youtube(-nocookie)?\.com$/i.test(String(origin))) return null;
+    let msg = data;
+    if (typeof msg === 'string') {
+      try { msg = JSON.parse(msg); } catch (e) { return null; }
+    }
+    if (!msg || typeof msg !== 'object') return null;
+    if (msg.event !== 'infoDelivery' && msg.event !== 'initialDelivery') return null;
+    const info = msg.info || {};
+    const out = {};
+    if (info.videoData && typeof info.videoData.title === 'string' && info.videoData.title.trim()) {
+      out.title = info.videoData.title.trim();
+      if (typeof info.videoData.author === 'string' && info.videoData.author.trim()) out.author = info.videoData.author.trim();
+    }
+    if (typeof info.playerState === 'number') out.playerState = info.playerState;
+    return (out.title || typeof out.playerState === 'number') ? out : null;
+  }
+
+  function sendListeningHandshake(iframeEl) {
+    if (!iframeEl || !iframeEl.contentWindow) return false;
+    try {
+      iframeEl.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 'casper-music', channel: 'widget' }), '*');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function openYouTubeMusicPopup(parsed) {
     const url = buildYouTubeMusicUrl(parsed);
     if (typeof global.open !== 'function') return false;
@@ -193,6 +225,8 @@
     buildEmbedUrl: buildEmbedUrl,
     buildYouTubeMusicUrl: buildYouTubeMusicUrl,
     sendPlayerCommand: sendPlayerCommand,
+    parseYouTubeInfoMessage: parseYouTubeInfoMessage,
+    sendListeningHandshake: sendListeningHandshake,
     openYouTubeMusicPopup: openYouTubeMusicPopup
   };
 
